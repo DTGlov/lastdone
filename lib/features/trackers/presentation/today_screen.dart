@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
@@ -197,7 +198,7 @@ class _TrackerCard extends StatelessWidget {
       child: Card(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: InkWell(
-          onTap: () => _editTracker(context, item.overview),
+          onTap: () => _openTracker(context, item.tracker.id),
           borderRadius: BorderRadius.circular(AppRadii.card),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -250,19 +251,41 @@ class _TrackerCard extends StatelessWidget {
   }
 }
 
-Future<void> _editTracker(
-  BuildContext context,
-  TrackerOverview overview,
-) async {
-  final result = await showTrackerEditor(
-    context: context,
-    repository: context.read<TrackerRepository>(),
-    clock: context.read<AppClock>(),
-    overview: overview,
+Future<void> _openTracker(BuildContext context, String trackerId) async {
+  final completion = await context.push<Completion>('/trackers/$trackerId');
+  if (completion == null || !context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: const Text('Freshly handled.'),
+      duration: const Duration(seconds: 5),
+      action: SnackBarAction(
+        label: 'Undo',
+        onPressed: () => _undoCompletion(context, completion),
+      ),
+    ),
   );
-  if (result == true && context.mounted) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Tracker updated.')));
+}
+
+Future<void> _undoCompletion(
+  BuildContext context,
+  Completion completion,
+) async {
+  final repository = context.read<TrackerRepository>();
+  if (repository case final TrackerCompletionRepository completionRepository) {
+    try {
+      await completionRepository.deleteCompletion(completion.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Back to where you left it.')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('We could not undo that just yet.')),
+        );
+      }
+    }
   }
 }
 

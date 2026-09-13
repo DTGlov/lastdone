@@ -9,6 +9,8 @@ import '../features/onboarding/presentation/onboarding_view_model.dart';
 import '../features/profile/presentation/you_screen.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/trackers/presentation/today_screen.dart';
+import '../features/trackers/presentation/tracker_detail_screen.dart';
+import '../features/trackers/presentation/tracker_detail_view_model.dart';
 import '../features/trackers/domain/tracker_repository.dart';
 import '../features/trackers/presentation/tracker_editor_sheet.dart';
 import '../features/today/presentation/today_view_model.dart';
@@ -31,6 +33,19 @@ class AppRouter {
                  clock: clock,
                ),
                child: const OnboardingScreen(),
+             ),
+           ),
+           GoRoute(
+             path: '/trackers/:id',
+             builder: (_, state) => ChangeNotifierProvider(
+               create: (context) => TrackerDetailViewModel(
+                 repository: context.read<TrackerRepository>(),
+                 clock: context.read<AppClock>(),
+                 trackerId: state.pathParameters['id']!,
+               ),
+               child: TrackerDetailScreen(
+                 trackerId: state.pathParameters['id']!,
+               ),
              ),
            ),
            StatefulShellRoute.indexedStack(
