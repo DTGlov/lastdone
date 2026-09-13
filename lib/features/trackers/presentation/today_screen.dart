@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/app_preferences_controller.dart';
 import '../../../core/design_system/design_tokens.dart';
 import '../../../core/time/app_clock.dart';
 import '../../../core/widgets/dun_view.dart';
@@ -76,9 +77,11 @@ class _TodayHeader extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              model.greeting,
-              style: Theme.of(context).textTheme.titleMedium,
+            Consumer<AppPreferencesController>(
+              builder: (context, preferences, _) => Text(
+                '${model.greeting}${preferences.greetingName}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text('Today', style: Theme.of(context).textTheme.headlineSmall),

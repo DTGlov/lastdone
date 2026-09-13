@@ -140,6 +140,7 @@ class LocalNotificationGateway implements NotificationGateway {
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
           playSound: true,
+          largeIcon: DrawableResourceAndroidBitmap('dun_notification'),
         ),
         iOS: DarwinNotificationDetails(presentSound: true),
       ),
