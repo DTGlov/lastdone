@@ -2,7 +2,7 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseBootstrap {
-  static const version = 2;
+  static const version = 3;
   static Future<Database> open({
     String? databasePath,
     DatabaseFactory? factory,
@@ -27,6 +27,15 @@ class DatabaseBootstrap {
         await db.execute(
           'CREATE INDEX completions_completed_at ON completions (completed_at)',
         );
+        await db.execute('''CREATE TABLE subscriptions (
+            id TEXT PRIMARY KEY, catalog_service_id TEXT, name TEXT NOT NULL,
+            category TEXT NOT NULL, logo_key TEXT, amount_minor INTEGER NOT NULL,
+            currency TEXT NOT NULL, frequency TEXT NOT NULL,
+            next_charge_date TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+            note TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''');
+        await db.execute(
+          'CREATE INDEX subscriptions_next_charge ON subscriptions (active, next_charge_date)',
+        );
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -41,6 +50,19 @@ class DatabaseBootstrap {
           );
           await db.execute(
             "ALTER TABLE trackers ADD COLUMN color_key TEXT NOT NULL DEFAULT 'plum'",
+          );
+        }
+        if (oldVersion < 3) {
+          await db.execute(
+            '''CREATE TABLE subscriptions (
+              id TEXT PRIMARY KEY, catalog_service_id TEXT, name TEXT NOT NULL,
+              category TEXT NOT NULL, logo_key TEXT, amount_minor INTEGER NOT NULL,
+              currency TEXT NOT NULL, frequency TEXT NOT NULL,
+              next_charge_date TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1,
+              note TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''',
+          );
+          await db.execute(
+            'CREATE INDEX subscriptions_next_charge ON subscriptions (active, next_charge_date)',
           );
         }
       },

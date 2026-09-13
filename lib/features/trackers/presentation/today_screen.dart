@@ -254,7 +254,9 @@ class _TrackerCard extends StatelessWidget {
 Future<void> _openTracker(BuildContext context, String trackerId) async {
   final completion = await context.push<Completion>('/trackers/$trackerId');
   if (completion == null || !context.mounted) return;
-  ScaffoldMessenger.of(context).showSnackBar(
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
     SnackBar(
       content: const Text('Freshly handled.'),
       duration: const Duration(seconds: 5),
@@ -270,6 +272,7 @@ Future<void> _undoCompletion(
   BuildContext context,
   Completion completion,
 ) async {
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
   final repository = context.read<TrackerRepository>();
   if (repository case final TrackerCompletionRepository completionRepository) {
     try {

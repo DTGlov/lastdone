@@ -7,6 +7,10 @@ import '../features/onboarding/data/onboarding_status_store.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/onboarding/presentation/onboarding_view_model.dart';
 import '../features/profile/presentation/you_screen.dart';
+import '../features/subscriptions/presentation/subscriptions_screen.dart';
+import '../features/subscriptions/presentation/subscriptions_view_model.dart';
+import '../features/subscriptions/presentation/subscription_editor_sheet.dart';
+import '../features/subscriptions/domain/subscription_repository.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/trackers/presentation/today_screen.dart';
 import '../features/trackers/presentation/tracker_detail_screen.dart';
@@ -21,6 +25,7 @@ class AppRouter {
     required TrackerRepository trackerRepository,
     required OnboardingStatusStore statusStore,
     required AppClock clock,
+    SubscriptionRepository? subscriptionRepository,
   }) : router = GoRouter(
          initialLocation: onboardingComplete ? '/today' : '/onboarding',
          routes: [
@@ -68,6 +73,22 @@ class AppRouter {
                StatefulShellBranch(
                  routes: [
                    GoRoute(
+                     path: '/subscriptions',
+                     builder: (_, _) => ChangeNotifierProvider(
+                       create: (_) => SubscriptionsViewModel(
+                         repository:
+                             subscriptionRepository ??
+                             const UnavailableSubscriptionRepository(),
+                         clock: clock,
+                       ),
+                       child: const SubscriptionsScreen(),
+                     ),
+                   ),
+                 ],
+               ),
+               StatefulShellBranch(
+                 routes: [
+                   GoRoute(
                      path: '/timeline',
                      builder: (_, _) => const TimelineScreen(),
                    ),
@@ -96,7 +117,7 @@ class AppShell extends StatelessWidget {
       child: FloatingActionButton(
         key: const Key('create-action'),
         tooltip: 'Create tracker',
-        onPressed: () => _createTracker(context),
+        onPressed: () => _createAction(context, navigationShell.currentIndex),
         child: const Icon(Icons.add),
       ),
     ),
@@ -109,11 +130,44 @@ class AppShell extends StatelessWidget {
       ),
       destinations: const [
         NavigationDestination(icon: Icon(Icons.today), label: 'Today'),
+        NavigationDestination(icon: Icon(Icons.autorenew), label: 'Subs'),
         NavigationDestination(icon: Icon(Icons.timeline), label: 'Timeline'),
         NavigationDestination(icon: Icon(Icons.person), label: 'You'),
       ],
     ),
   );
+}
+
+Future<void> _createAction(BuildContext context, int index) async {
+  if (index == 0) {
+    await _createTracker(context);
+  } else if (index == 1) {
+    await _createSubscription(context);
+  } else {
+    final choice = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.checklist),
+              title: const Text('Tracker'),
+              onTap: () => Navigator.pop(context, false),
+            ),
+            ListTile(
+              leading: const Icon(Icons.autorenew),
+              title: const Text('Subscription'),
+              onTap: () => Navigator.pop(context, true),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    if (choice == true) await _createSubscription(context);
+    if (choice == false && context.mounted) await _createTracker(context);
+  }
 }
 
 Future<void> _createTracker(BuildContext context) async {
@@ -126,5 +180,19 @@ Future<void> _createTracker(BuildContext context) async {
     context.go('/today');
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Added to your rhythm.')));
+  }
+}
+
+Future<void> _createSubscription(BuildContext context) async {
+  final result = await showSubscriptionEditor(
+    context: context,
+    repository: context.read<SubscriptionRepository>(),
+    clock: context.read<AppClock>(),
+  );
+  if (result == true && context.mounted) {
+    context.go('/subscriptions');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Added to your monthly picture.')),
+    );
   }
 }
