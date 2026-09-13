@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:simple_icons/simple_icons.dart';
 
 import '../../../core/design_system/design_tokens.dart';
+import '../../../core/design_system/app_icons.dart';
 import '../../../core/time/app_clock.dart';
 import '../domain/subscription.dart';
 import '../domain/subscription_catalog.dart';
@@ -269,7 +271,7 @@ class _ServicePickerState extends State<_ServicePicker> {
               autofocus: true,
               onChanged: (value) => setState(() => query = value),
               decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: Icon(AppIcons.search),
                 labelText: 'Search services',
               ),
             ),
@@ -283,6 +285,7 @@ class _ServicePickerState extends State<_ServicePicker> {
                       leading: SubscriptionLogo(
                         name: entry.name,
                         category: entry.category,
+                        catalogServiceId: entry.id,
                         logoKey: entry.logoKey,
                       ),
                       title: Text(entry.name),
@@ -383,26 +386,74 @@ class SubscriptionLogo extends StatelessWidget {
   const SubscriptionLogo({
     required this.name,
     required this.category,
+    this.catalogServiceId,
     this.logoKey,
     this.small = false,
     super.key,
   });
   final String name;
   final SubscriptionCategory category;
+  final String? catalogServiceId;
   final String? logoKey;
   final bool small;
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: '$name logo',
-    child: CircleAvatar(
-      radius: small ? 16 : 24,
-      backgroundColor: _categoryColor(context, category),
-      child: logoKey == null
-          ? Text(name.isEmpty ? '?' : name.substring(0, 1).toUpperCase())
-          : Icon(Icons.auto_awesome, size: small ? 16 : 22),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final icon = subscriptionBrandIcon(catalogServiceId);
+    final tileSize = small ? 36.0 : 42.0;
+    return Semantics(
+      label: '$name logo',
+      image: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: _categoryColor(context, category).withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(AppRadii.control),
+          border: Border.all(color: _categoryColor(context, category)),
+        ),
+        child: SizedBox(
+          width: tileSize,
+          height: tileSize,
+          child: Center(
+            child: icon == null
+                ? Text(
+                    name.isEmpty ? '?' : name.substring(0, 1).toUpperCase(),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  )
+                : Icon(
+                    icon,
+                    size: small ? 18 : 22,
+                    color: _categoryColor(context, category),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+IconData? subscriptionBrandIcon(String? catalogServiceId) =>
+    switch (catalogServiceId) {
+      'netflix' => SimpleIcons.netflix,
+      'apple-tv-plus' => SimpleIcons.appletv,
+      'spotify' => SimpleIcons.spotify,
+      'apple-music' => SimpleIcons.applemusic,
+      'youtube-music' => SimpleIcons.youtubemusic,
+      'tidal' => SimpleIcons.tidal,
+      'chatgpt' => SimpleIcons.chatbot,
+      'claude' => SimpleIcons.claude,
+      'perplexity' => SimpleIcons.perplexity,
+      'github-copilot' => SimpleIcons.githubcopilot,
+      'playstation-plus' => SimpleIcons.playstation,
+      'apple-arcade' => SimpleIcons.applearcade,
+      'icloud-plus' => SimpleIcons.icloud,
+      'dropbox' => SimpleIcons.dropbox,
+      'notion' => SimpleIcons.notion,
+      'medium' => SimpleIcons.medium,
+      'substack' => SimpleIcons.substack,
+      'audible' => SimpleIcons.audible,
+      'strava' => SimpleIcons.strava,
+      'fitbit-premium' => SimpleIcons.fitbit,
+      _ => null,
+    };
 
 Color _categoryColor(BuildContext context, SubscriptionCategory category) {
   final colors = Theme.of(context).extension<TrackerStatusThemeExtension>()!;

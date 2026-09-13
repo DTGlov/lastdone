@@ -29,9 +29,9 @@ class TodayScreen extends StatelessWidget {
           ),
           children: [
             _TodayHeader(model: model),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
             _SummaryCard(model: model),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
             AnimatedSwitcher(
               duration: _motionDuration(context),
               switchInCurve: AppMotion.curve,
@@ -80,7 +80,7 @@ class _TodayHeader extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: AppSpacing.xs),
-            Text('Today', style: Theme.of(context).textTheme.displaySmall),
+            Text('Today', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: AppSpacing.xs),
             Text(
               model.formattedDate,
@@ -91,9 +91,7 @@ class _TodayHeader extends StatelessWidget {
       ),
       Padding(
         padding: const EdgeInsets.only(top: AppSpacing.sm),
-        child: DunView(
-          state: model.needsAttention ? DunState.focused : DunState.resting,
-        ),
+        child: const SizedBox(width: 92, height: 92, child: DunMascot()),
       ),
     ],
   );
@@ -103,14 +101,24 @@ class _SummaryCard extends StatelessWidget {
   const _SummaryCard({required this.model});
   final TodayViewModel model;
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.primaryContainer
+          .withValues(alpha: 0.45),
+      borderRadius: BorderRadius.circular(AppRadii.control),
+      border: Border.all(color: Theme.of(context).dividerColor),
+    ),
     child: Padding(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             model.needsAttention ? Icons.wb_sunny_outlined : Icons.auto_awesome,
+            size: 20,
             semanticLabel: model.needsAttention
                 ? 'Needs attention'
                 : 'Day summary',
@@ -141,7 +149,7 @@ class _ContentState extends StatelessWidget {
           contextText: 'To look after',
         ),
         ...model.sections.needsAttention.map(
-          (item) => _TrackerCard(item: item),
+          (item) => _TrackerCard(key: ValueKey(item.tracker.id), item: item),
         ),
         const SizedBox(height: AppSpacing.md),
       ],
@@ -150,7 +158,9 @@ class _ContentState extends StatelessWidget {
           title: 'Coming up',
           contextText: 'Next 7 days and beyond',
         ),
-        ...model.sections.comingUp.map((item) => _TrackerCard(item: item)),
+        ...model.sections.comingUp.map(
+          (item) => _TrackerCard(key: ValueKey(item.tracker.id), item: item),
+        ),
         const SizedBox(height: AppSpacing.md),
       ],
       if (model.sections.recentlyDone.isNotEmpty) ...[
@@ -158,7 +168,9 @@ class _ContentState extends StatelessWidget {
           title: 'Recently done',
           contextText: 'Handled lately',
         ),
-        ...model.sections.recentlyDone.map((item) => _TrackerCard(item: item)),
+        ...model.sections.recentlyDone.map(
+          (item) => _TrackerCard(key: ValueKey(item.tracker.id), item: item),
+        ),
       ],
     ],
   );
@@ -182,7 +194,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _TrackerCard extends StatelessWidget {
-  const _TrackerCard({required this.item});
+  const _TrackerCard({required this.item, super.key});
   final TodayTracker item;
   @override
   Widget build(BuildContext context) {
@@ -201,7 +213,10 @@ class _TrackerCard extends StatelessWidget {
           onTap: () => _openTracker(context, item.tracker.id),
           borderRadius: BorderRadius.circular(AppRadii.card),
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -215,28 +230,17 @@ class _TrackerCard extends StatelessWidget {
                         item.tracker.title,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 2),
                       Text(
-                        item.tracker.repeatRule.labelFor(
-                          item.tracker.repeatInterval,
-                        ),
+                        '${item.tracker.repeatRule.labelFor(item.tracker.repeatInterval)} · ${status.title}',
                         style: Theme.of(context).textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        status.title,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      if (status.context != null)
-                        Text(
-                          status.context!,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
                     ],
                   ),
                 ),
                 const Padding(
-                  padding: EdgeInsets.only(top: 8),
+                  padding: EdgeInsets.only(top: 6),
                   child: Icon(
                     Icons.chevron_right,
                     semanticLabel: 'Open details',
@@ -299,7 +303,7 @@ class _CategoryIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<TrackerStatusThemeExtension>()!;
     final color = switch (tracker.color) {
-      TrackerColor.lime => const Color(0xFFC8F55B),
+      TrackerColor.lime => Theme.of(context).colorScheme.primaryContainer,
       TrackerColor.plum => colors.category,
       TrackerColor.sky => colors.informational,
       TrackerColor.coral => colors.overdue,
@@ -318,9 +322,21 @@ class _CategoryIcon extends StatelessWidget {
     };
     return Semantics(
       label: '${tracker.category.label} category, ${tracker.title} icon',
-      child: CircleAvatar(
-        backgroundColor: color,
-        child: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.22),
+          borderRadius: BorderRadius.circular(AppRadii.control),
+          border: Border.all(color: color),
+        ),
+        child: SizedBox(
+          width: 42,
+          height: 42,
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.onSurface,
+            size: 21,
+          ),
+        ),
       ),
     );
   }
@@ -337,12 +353,13 @@ class _LoadingState extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Row(
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 48,
                 height: 48,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Colors.black12,
+                    color: Theme.of(context).dividerColor
+                        .withValues(alpha: 0.45),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -352,9 +369,18 @@ class _LoadingState extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(height: 16, color: Colors.black12),
+                    Container(
+                      height: 16,
+                      color: Theme.of(context).dividerColor
+                          .withValues(alpha: 0.45),
+                    ),
                     const SizedBox(height: AppSpacing.sm),
-                    Container(width: 120, height: 12, color: Colors.black12),
+                    Container(
+                      width: 120,
+                      height: 12,
+                      color: Theme.of(context).dividerColor
+                          .withValues(alpha: 0.45),
+                    ),
                   ],
                 ),
               ),

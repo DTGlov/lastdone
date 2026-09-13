@@ -492,7 +492,7 @@ extension TrackerColorLabel on TrackerColor {
   };
 
   Color value(BuildContext context) => switch (this) {
-    TrackerColor.lime => const Color(0xFFC8F55B),
+    TrackerColor.lime => Theme.of(context).colorScheme.primaryContainer,
     TrackerColor.plum => Theme.of(
       context,
     ).extension<TrackerStatusThemeExtension>()!.category,

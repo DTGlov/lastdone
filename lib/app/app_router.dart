@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/time/app_clock.dart';
+import '../core/design_system/app_icons.dart';
 import '../features/onboarding/data/onboarding_status_store.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/onboarding/presentation/onboarding_view_model.dart';
@@ -118,7 +119,7 @@ class AppShell extends StatelessWidget {
         key: const Key('create-action'),
         tooltip: 'Create tracker',
         onPressed: () => _createAction(context, navigationShell.currentIndex),
-        child: const Icon(Icons.add),
+        child: const Icon(AppIcons.add),
       ),
     ),
     floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -129,10 +130,26 @@ class AppShell extends StatelessWidget {
         initialLocation: index == navigationShell.currentIndex,
       ),
       destinations: const [
-        NavigationDestination(icon: Icon(Icons.today), label: 'Today'),
-        NavigationDestination(icon: Icon(Icons.autorenew), label: 'Subs'),
-        NavigationDestination(icon: Icon(Icons.timeline), label: 'Timeline'),
-        NavigationDestination(icon: Icon(Icons.person), label: 'You'),
+        NavigationDestination(
+          icon: Icon(AppIcons.today),
+          selectedIcon: Icon(AppIcons.today),
+          label: 'Today',
+        ),
+        NavigationDestination(
+          icon: Icon(AppIcons.subscriptions),
+          selectedIcon: Icon(AppIcons.subscriptions),
+          label: 'Subs',
+        ),
+        NavigationDestination(
+          icon: Icon(AppIcons.timeline),
+          selectedIcon: Icon(AppIcons.timeline),
+          label: 'Timeline',
+        ),
+        NavigationDestination(
+          icon: Icon(AppIcons.profile),
+          selectedIcon: Icon(AppIcons.profile),
+          label: 'You',
+        ),
       ],
     ),
   );
@@ -151,12 +168,12 @@ Future<void> _createAction(BuildContext context, int index) async {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.checklist),
+              leading: const Icon(AppIcons.tracker),
               title: const Text('Tracker'),
               onTap: () => Navigator.pop(context, false),
             ),
             ListTile(
-              leading: const Icon(Icons.autorenew),
+              leading: const Icon(AppIcons.subscriptions),
               title: const Text('Subscription'),
               onTap: () => Navigator.pop(context, true),
             ),

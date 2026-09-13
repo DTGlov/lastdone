@@ -132,7 +132,9 @@ class _WelcomeStep extends StatelessWidget {
     ),
     children: [
       const SizedBox(height: AppSpacing.xl),
-      const Center(child: DunView(state: DunState.resting)),
+      const Center(
+        child: SizedBox(width: 160, height: 140, child: DunMascot()),
+      ),
       const SizedBox(height: AppSpacing.xl),
       Text(
         'LastDone',
@@ -465,7 +467,9 @@ class _ReminderStep extends StatelessWidget {
     ),
     children: [
       const SizedBox(height: AppSpacing.xl),
-      const Center(child: DunView(state: DunState.focused)),
+      const Center(
+        child: SizedBox(width: 160, height: 140, child: DunMascot()),
+      ),
       const SizedBox(height: AppSpacing.xl),
       Text(
         'A gentle nudge, right on time.',
@@ -488,7 +492,13 @@ class _CompletionStep extends StatelessWidget {
     action: _SubmitButton(model: model),
     children: [
       const SizedBox(height: AppSpacing.xl),
-      const Center(child: DunView(state: DunState.celebrating)),
+      const Center(
+        child: SizedBox(
+          width: 160,
+          height: 140,
+          child: DunMascot(state: DunMascotState.celebrating),
+        ),
+      ),
       const SizedBox(height: AppSpacing.xl),
       Text(
         'You’re all set.',

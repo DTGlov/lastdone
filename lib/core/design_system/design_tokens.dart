@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_colors.dart';
+
 class AppSpacing {
   const AppSpacing._();
   static const xs = 8.0, sm = 12.0, md = 16.0, lg = 24.0, xl = 32.0;
@@ -7,13 +9,13 @@ class AppSpacing {
 
 class AppRadii {
   const AppRadii._();
-  static const card = 20.0, control = 14.0, pill = 999.0;
+  static const card = 18.0, control = 12.0, pill = 999.0;
 }
 
 class AppMotion {
   const AppMotion._();
   static const short = Duration(milliseconds: 180),
-      standard = Duration(milliseconds: 280),
+      standard = Duration(milliseconds: 240),
       curve = Curves.easeOutCubic;
 }
 
@@ -28,11 +30,11 @@ class TrackerStatusThemeExtension
     required this.informational,
   });
   static const defaults = TrackerStatusThemeExtension(
-    overdue: Color(0xFFFF8066),
-    dueSoon: Color(0xFFFFD75A),
-    completed: Color(0xFFA8E585),
-    category: Color(0xFFB8A0EF),
-    informational: Color(0xFF8ECFF2),
+    overdue: AppColors.overdueCoral,
+    dueSoon: AppColors.dueSoonGold,
+    completed: AppColors.completedMint,
+    category: AppColors.categoryPlum,
+    informational: AppColors.informationalSky,
   );
   final Color overdue, dueSoon, completed, category, informational;
   @override
