@@ -1,4 +1,7 @@
-# LastDone project instructions
+# EverDun project instructions
+
+- Product branding uses `EverDun` and mascot branding uses `Dun`; the Dart package is `everdun`.
+- The GitHub remote intentionally remains the historical LastDone URL until David renames it manually.
 
 - Investigate first and preserve unrelated changes.
 - Work in small, reviewable vertical phases; stop after each phase for review.

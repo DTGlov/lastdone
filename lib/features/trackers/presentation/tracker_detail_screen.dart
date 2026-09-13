@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/design_system/design_tokens.dart';
 import '../../../core/design_system/lastdone_dialog.dart';
 import '../../../core/time/app_clock.dart';
+import '../../../core/text/count_text.dart';
 import '../../../core/widgets/dun_view.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../today/domain/today_overview.dart';
@@ -503,23 +504,23 @@ String _statusCopy(TodayTracker item, DateTime currentDate) {
   if (item.status == TodayStatus.unscheduled) {
     final completion = item.latestCompletion;
     if (completion == null) return 'Whenever you’re ready';
-    return '${currentDate.difference(_dateOnly(completion.completedAt)).inDays} days since last done';
+    return '${daysText(currentDate.difference(_dateOnly(completion.completedAt)).inDays)} since last done';
   }
   if (item.status == TodayStatus.overdue) {
-    return '${currentDate.difference(item.nextDueDate!).inDays} days overdue';
+    return '${daysText(currentDate.difference(item.nextDueDate!).inDays)} overdue';
   }
   if (item.status == TodayStatus.dueToday) return 'Due today';
   if (item.status == TodayStatus.recentlyDone) {
     return 'Done ${_relativeDate(item.latestCompletion!.completedAt, currentDate).toLowerCase()}';
   }
-  return 'Due in ${item.nextDueDate!.difference(currentDate).inDays} days';
+  return 'Due in ${daysText(item.nextDueDate!.difference(currentDate).inDays)}';
 }
 
 String _relativeDate(DateTime date, DateTime currentDate) {
   final days = currentDate.difference(_dateOnly(date)).inDays;
   if (days == 0) return 'Today';
   if (days == 1) return 'Yesterday';
-  return '$days days ago';
+  return '${daysText(days)} ago';
 }
 
 String _dateLabel(DateTime date) => '${date.month}/${date.day}/${date.year}';

@@ -53,7 +53,7 @@ class LocalNotificationGateway implements NotificationGateway {
       tz.setLocalLocation(tz.UTC);
     }
     const settings = InitializationSettings(
-      android: AndroidInitializationSettings('ic_stat_lastdone'),
+      android: AndroidInitializationSettings('ic_stat_everdun'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -138,10 +138,10 @@ class LocalNotificationGateway implements NotificationGateway {
       payload: _encodePayload(candidate.preference.target),
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
-          'lastdone_reminders',
-          'LastDone reminders',
-          channelDescription: 'Friendly reminders from LastDone.',
-          icon: 'ic_stat_lastdone',
+          'everdun_reminders',
+          'EverDun reminders',
+          channelDescription: 'Friendly reminders from EverDun.',
+          icon: 'ic_stat_everdun',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
           playSound: true,
@@ -170,13 +170,13 @@ class LocalNotificationGateway implements NotificationGateway {
     await _plugin.show(
       id: 999999,
       title: 'Dun is ready',
-      body: 'LastDone reminders are working.',
+      body: 'EverDun reminders are working.',
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
-          'lastdone_reminders',
-          'LastDone reminders',
-          channelDescription: 'Friendly reminders from LastDone.',
-          icon: 'ic_stat_lastdone',
+          'everdun_reminders',
+          'EverDun reminders',
+          channelDescription: 'Friendly reminders from EverDun.',
+          icon: 'ic_stat_everdun',
         ),
         iOS: DarwinNotificationDetails(presentSound: true),
       ),

@@ -1,8 +1,8 @@
 # Phase 1: Onboarding
 
-LastDone’s first launch is a short, local onboarding journey:
+EverDun’s first launch is a short, local onboarding journey:
 
-1. Welcome introduces LastDone and Dun.
+1. Welcome introduces EverDun and Dun.
 2. Life areas help the user choose what deserves remembering.
 3. Starter trackers provide useful defaults that can be selected, deselected, or lightly edited.
 4. Reminder education records whether the user wants future reminders, without asking for device permission yet.

@@ -4,7 +4,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'app_icons.dart';
 import 'design_tokens.dart';
 
-Future<DateTime?> showLastDoneCalendar({
+Future<DateTime?> showEverDunCalendar({
   required BuildContext context,
   required DateTime firstDay,
   required DateTime lastDay,
@@ -17,7 +17,7 @@ Future<DateTime?> showLastDoneCalendar({
   useSafeArea: true,
   isScrollControlled: true,
   showDragHandle: true,
-  builder: (_) => _LastDoneCalendarSheet(
+  builder: (_) => _EverDunCalendarSheet(
     firstDay: firstDay,
     lastDay: lastDay,
     initialDay: initialDay,
@@ -27,8 +27,8 @@ Future<DateTime?> showLastDoneCalendar({
   ),
 );
 
-class _LastDoneCalendarSheet extends StatefulWidget {
-  const _LastDoneCalendarSheet({
+class _EverDunCalendarSheet extends StatefulWidget {
+  const _EverDunCalendarSheet({
     required this.firstDay,
     required this.lastDay,
     required this.initialDay,
@@ -42,10 +42,10 @@ class _LastDoneCalendarSheet extends StatefulWidget {
   final bool Function(DateTime day)? enabledDayPredicate;
 
   @override
-  State<_LastDoneCalendarSheet> createState() => _LastDoneCalendarSheetState();
+  State<_EverDunCalendarSheet> createState() => _EverDunCalendarSheetState();
 }
 
-class _LastDoneCalendarSheetState extends State<_LastDoneCalendarSheet> {
+class _EverDunCalendarSheetState extends State<_EverDunCalendarSheet> {
   late DateTime _focusedDay = _dateOnly(widget.initialDay);
   late DateTime? _selectedDay = _dateOnly(widget.initialDay);
 

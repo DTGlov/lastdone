@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:simple_icons/simple_icons.dart';
 
 import '../../../core/design_system/design_tokens.dart';
-import '../../../core/design_system/lastdone_dialog.dart';
-import '../../../core/design_system/lastdone_calendar.dart';
+import '../../../core/design_system/everdun_dialog.dart';
+import '../../../core/design_system/everdun_calendar.dart';
 import '../../../core/design_system/app_icons.dart';
 import '../../../core/time/app_clock.dart';
 import '../../../app/app_preferences_controller.dart';
@@ -178,11 +178,11 @@ class _SubscriptionEditorSheetState extends State<SubscriptionEditorSheet> {
     if (model.reminderEnabled && model.active) await _offerReminderPermission();
     final saved = await model.save();
     if (!saved && mounted && model.errorMessage != null) {
-      await showLastDoneDialog<void>(
+      await showEverDunDialog<void>(
         context: context,
         title: 'Subscription not saved',
         message: model.errorMessage!,
-        variant: LastDoneDialogVariant.error,
+        variant: EverDunDialogVariant.error,
         primaryLabel: 'Keep editing',
       );
     }
@@ -194,10 +194,10 @@ class _SubscriptionEditorSheetState extends State<SubscriptionEditorSheet> {
       final gateway = context.read<NotificationGateway>();
       final status = await gateway.permissionStatus();
       if (status == NotificationPermissionStatus.authorized || !mounted) return;
-      final allow = await showLastDoneDialog<bool>(
+      final allow = await showEverDunDialog<bool>(
         context: context,
         title: 'A gentle reminder?',
-        message: 'LastDone can give you a local heads-up before this subscription renews. Nothing is sent to a server.',
+        message: 'EverDun can give you a local heads-up before this subscription renews. Nothing is sent to a server.',
         primaryLabel: 'Allow reminders',
         primaryResult: true,
         secondaryLabel: 'Not now',
@@ -206,11 +206,11 @@ class _SubscriptionEditorSheetState extends State<SubscriptionEditorSheet> {
       if (allow == true) await gateway.requestPermission();
     } catch (_) {
       if (mounted) {
-        await showLastDoneDialog<void>(
+        await showEverDunDialog<void>(
           context: context,
           title: 'Reminder setup is unavailable',
           message: 'The subscription can still be saved, but its local reminder could not be configured. You can try again later from Reminders.',
-          variant: LastDoneDialogVariant.warning,
+          variant: EverDunDialogVariant.warning,
           primaryLabel: 'Continue',
         );
       }
@@ -218,11 +218,11 @@ class _SubscriptionEditorSheetState extends State<SubscriptionEditorSheet> {
   }
 
   Future<void> _confirmDiscard(SubscriptionEditorViewModel model) async {
-    final leave = await showLastDoneDialog<bool>(
+    final leave = await showEverDunDialog<bool>(
       context: context,
       title: 'Leave without saving?',
       message: 'Your subscription details are still here.',
-      variant: LastDoneDialogVariant.confirmation,
+      variant: EverDunDialogVariant.confirmation,
       primaryLabel: 'Leave',
       primaryResult: true,
       secondaryLabel: 'Keep editing',
@@ -456,7 +456,7 @@ class _DateField extends StatelessWidget {
   Future<void> _chooseDate(BuildContext context) async {
     final today = model.clock.now.toLocal();
     final date = DateTime(today.year, today.month, today.day);
-    final chosen = await showLastDoneCalendar(
+    final chosen = await showEverDunCalendar(
       context: context,
       firstDay: DateTime(2000),
       lastDay: DateTime(2100),

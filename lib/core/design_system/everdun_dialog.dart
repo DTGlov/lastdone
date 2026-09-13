@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'app_icons.dart';
 import 'design_tokens.dart';
 
-enum LastDoneDialogVariant {
+enum EverDunDialogVariant {
   information,
   success,
   warning,
@@ -12,11 +12,11 @@ enum LastDoneDialogVariant {
   destructiveConfirmation,
 }
 
-Future<T?> showLastDoneDialog<T>({
+Future<T?> showEverDunDialog<T>({
   required BuildContext context,
   required String title,
   required String message,
-  LastDoneDialogVariant variant = LastDoneDialogVariant.information,
+  EverDunDialogVariant variant = EverDunDialogVariant.information,
   IconData? icon,
   String primaryLabel = 'Okay',
   T? primaryResult,
@@ -28,7 +28,7 @@ Future<T?> showLastDoneDialog<T>({
 }) => showDialog<T>(
   context: context,
   barrierDismissible: barrierDismissible,
-  builder: (_) => _LastDoneDialog(
+  builder: (_) => _EverDunDialog(
     title: title,
     message: message,
     variant: variant,
@@ -42,8 +42,8 @@ Future<T?> showLastDoneDialog<T>({
   ),
 );
 
-class _LastDoneDialog extends StatelessWidget {
-  const _LastDoneDialog({
+class _EverDunDialog extends StatelessWidget {
+  const _EverDunDialog({
     required this.title,
     required this.message,
     required this.variant,
@@ -58,7 +58,7 @@ class _LastDoneDialog extends StatelessWidget {
 
   final String title;
   final String message;
-  final LastDoneDialogVariant variant;
+  final EverDunDialogVariant variant;
   final IconData? icon;
   final String primaryLabel;
   final Object? primaryResult;
@@ -72,18 +72,18 @@ class _LastDoneDialog extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.extension<TrackerStatusThemeExtension>()!;
     final accent = switch (variant) {
-      LastDoneDialogVariant.error => theme.colorScheme.error,
-      LastDoneDialogVariant.warning => colors.dueSoon,
-      LastDoneDialogVariant.success => colors.completed,
+      EverDunDialogVariant.error => theme.colorScheme.error,
+      EverDunDialogVariant.warning => colors.dueSoon,
+      EverDunDialogVariant.success => colors.completed,
       _ => theme.colorScheme.primary,
     };
     final resolvedIcon =
         icon ??
         switch (variant) {
-          LastDoneDialogVariant.success => AppIcons.complete,
-          LastDoneDialogVariant.error => Icons.error_outline,
-          LastDoneDialogVariant.warning => Icons.warning_amber_outlined,
-          LastDoneDialogVariant.destructiveConfirmation => Icons.delete_outline,
+          EverDunDialogVariant.success => AppIcons.complete,
+          EverDunDialogVariant.error => Icons.error_outline,
+          EverDunDialogVariant.warning => Icons.warning_amber_outlined,
+          EverDunDialogVariant.destructiveConfirmation => Icons.delete_outline,
           _ => AppIcons.insight,
         };
     return Dialog(

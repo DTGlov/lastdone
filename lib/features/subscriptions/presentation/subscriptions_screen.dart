@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/design_system/design_tokens.dart';
 import '../../../core/time/app_clock.dart';
 import '../../../core/widgets/dun_view.dart';
+import '../../../core/text/count_text.dart';
 import '../domain/subscription.dart';
 import '../domain/subscription_repository.dart';
 import '../../reminders/domain/reminder_repository.dart';
@@ -317,7 +318,7 @@ String _chargeLanguage(DateTime date, DateTime current) {
   final days = date.difference(current).inDays;
   if (days == 0) return 'Today';
   if (days == 1) return 'Tomorrow';
-  if (days < 7) return 'In $days days';
+  if (days < 7) return 'In ${daysText(days)}';
   return '${date.month}/${date.day}/${date.year}';
 }
 

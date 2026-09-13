@@ -12,7 +12,7 @@ The You screen is a local-first profile rather than an account. `ProfileSettings
 
 ## Branding and platform assets
 
-The approved masters are stored as `assets/branding/lastdone_app_icon.png` and `assets/branding/lastdone_adaptive_foreground.png`. They remain square PNGs: the app icon is opaque RGB and the adaptive foreground is RGBA with real transparency. The generated iOS icons use the opaque master. Android uses the opaque legacy icon, the transparent adaptive foreground, and `#2F6B4F` as the adaptive background. `android/app/src/main/res/drawable/dun_notification.png` provides the bundled Dun artwork as a large notification icon; the existing white checkmark drawable remains the monochrome status-bar icon.
+The approved masters are stored as `assets/branding/everdun_app_icon.png` and `assets/branding/everdun_adaptive_foreground.png`. They remain square PNGs: the app icon is opaque RGB and the adaptive foreground is RGBA with real transparency. The generated iOS icons use the opaque master. Android uses the opaque legacy icon, the transparent adaptive foreground, and `#2F6B4F` as the adaptive background. `android/app/src/main/res/drawable/dun_notification.png` provides the bundled Dun artwork as a large notification icon; the existing white checkmark drawable remains the monochrome status-bar icon.
 
 `flutter_launcher_icons` and `flutter_native_splash` are development-time generators, configured in `pubspec.yaml`. No runtime image URL or downloaded brand asset is used. Trademark artwork remains the approved Dun artwork and is not presented as a partnership or endorsement.
 

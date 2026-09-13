@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lastdone/core/time/app_clock.dart';
+import 'package:everdun/core/time/app_clock.dart';
 
 void main() {
   test('fixed clock is deterministic', () {

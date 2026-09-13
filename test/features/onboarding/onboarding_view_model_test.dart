@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lastdone/core/time/app_clock.dart';
-import 'package:lastdone/features/onboarding/data/onboarding_status_store.dart';
-import 'package:lastdone/features/onboarding/domain/onboarding_models.dart';
-import 'package:lastdone/features/onboarding/presentation/onboarding_view_model.dart';
-import 'package:lastdone/features/trackers/domain/tracker.dart';
-import 'package:lastdone/features/trackers/domain/tracker_repository.dart';
+import 'package:everdun/core/time/app_clock.dart';
+import 'package:everdun/features/onboarding/data/onboarding_status_store.dart';
+import 'package:everdun/features/onboarding/domain/onboarding_models.dart';
+import 'package:everdun/features/onboarding/presentation/onboarding_view_model.dart';
+import 'package:everdun/features/trackers/domain/tracker.dart';
+import 'package:everdun/features/trackers/domain/tracker_repository.dart';
 
 class _FakeTrackerRepository implements TrackerRepository {
   List<Tracker> saved = [];

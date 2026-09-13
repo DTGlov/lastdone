@@ -52,7 +52,7 @@ class _RemindersContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           const Text(
-            'Reminders stay local to this device. LastDone never sends your tracker or subscription details to a server.',
+            'Reminders stay local to this device. EverDun never sends your tracker or subscription details to a server.',
           ),
           const SizedBox(height: AppSpacing.lg),
           Card(

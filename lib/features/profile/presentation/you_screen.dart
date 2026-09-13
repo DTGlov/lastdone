@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_preferences_controller.dart';
 import '../../../core/design_system/app_icons.dart';
 import '../../../core/design_system/design_tokens.dart';
-import '../../../core/design_system/lastdone_dialog.dart';
+import '../../../core/design_system/everdun_dialog.dart';
 import '../../../core/widgets/dun_view.dart';
 import '../../reminders/data/notification_gateway.dart';
 import '../../reminders/domain/reminder.dart';
@@ -63,7 +63,7 @@ class _YouContent extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       preferences.displayNameValue == null
-                          ? 'Your calm corner in LastDone.'
+                          ? 'Your calm corner in EverDun.'
                           : 'A little space for ${preferences.displayNameValue}.',
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
@@ -222,7 +222,7 @@ class _YouContent extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text('About LastDone'),
+                  title: const Text('About EverDun'),
                   subtitle: const Text('Warm tools for everyday rhythms.'),
                   onTap: () => _about(context),
                 ),
@@ -231,7 +231,7 @@ class _YouContent extends StatelessWidget {
                   title: const Text('Open-source licenses'),
                   onTap: () => showLicensePage(
                     context: context,
-                    applicationName: 'LastDone',
+                    applicationName: 'EverDun',
                   ),
                 ),
               ],
@@ -266,7 +266,7 @@ class _YouContent extends StatelessWidget {
     if (!context.mounted) return;
     showAboutDialog(
       context: context,
-      applicationName: 'LastDone',
+      applicationName: 'EverDun',
       applicationVersion: '${info.version} (${info.buildNumber})',
       applicationLegalese: 'Offline-first tools for everyday rhythms.',
     );
@@ -353,11 +353,11 @@ class _NameEditorSheetState extends State<_NameEditorSheet> {
         _saving = false;
         _error = 'We could not save your name yet. Please try again.';
       });
-      await showLastDoneDialog<void>(
+      await showEverDunDialog<void>(
         context: context,
         title: 'Name not saved',
         message: 'Your name is still here. Please try saving it again.',
-        variant: LastDoneDialogVariant.error,
+        variant: EverDunDialogVariant.error,
         primaryLabel: 'Keep editing',
       );
     }

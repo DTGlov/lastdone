@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lastdone/features/trackers/domain/tracker.dart';
+import 'package:everdun/features/trackers/domain/tracker.dart';
 
 void main() {
   test('tracker and completion retain domain invariants', () {

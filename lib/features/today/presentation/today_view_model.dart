@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../../../core/time/app_clock.dart';
+import '../../../core/text/count_text.dart';
 import '../../trackers/domain/tracker_repository.dart';
 import '../domain/today_overview.dart';
 
@@ -58,7 +59,7 @@ class TodayViewModel extends ChangeNotifier with WidgetsBindingObserver {
         );
     if (next != null) {
       final days = next.difference(currentDate).inDays;
-      if (days > 0) return 'Your next thing is due in $days days.';
+      if (days > 0) return 'Your next thing is due in ${daysText(days)}.';
     }
     return 'Everything looks nicely handled.';
   }

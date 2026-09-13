@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lastdone/app/app_theme.dart';
-import 'package:lastdone/core/design_system/app_colors.dart';
-import 'package:lastdone/core/design_system/design_tokens.dart';
+import 'package:everdun/app/app_theme.dart';
+import 'package:everdun/core/design_system/app_colors.dart';
+import 'package:everdun/core/design_system/design_tokens.dart';
 
 void main() {
   test('builds light and dark themes with semantic colors', () {
