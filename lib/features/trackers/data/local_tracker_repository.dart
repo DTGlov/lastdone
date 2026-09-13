@@ -6,9 +6,14 @@ import '../../subscriptions/domain/subscription.dart';
 import '../../subscriptions/domain/subscription_repository.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
+import '../../timeline/domain/timeline.dart';
+import '../../timeline/domain/timeline_repository.dart';
 
 class LocalTrackerRepository
-    implements TrackerCompletionRepository, SubscriptionRepository {
+    implements
+        TrackerCompletionRepository,
+        SubscriptionRepository,
+        TimelineRepository {
   LocalTrackerRepository({required this.database});
   final Database database;
   final StreamController<List<TrackerOverview>> _overviewChanges =
@@ -17,6 +22,8 @@ class LocalTrackerRepository
       StreamController<String>.broadcast(sync: true);
   final StreamController<List<Subscription>> _subscriptionChanges =
       StreamController<List<Subscription>>.broadcast(sync: true);
+  final StreamController<void> _timelineChanges =
+      StreamController<void>.broadcast(sync: true);
   @override
   Future<List<Tracker>> listTrackers() async {
     final rows = await database.query('trackers', orderBy: 'created_at ASC');
@@ -52,6 +59,7 @@ class LocalTrackerRepository
     await _overviewChanges.close();
     await _detailChanges.close();
     await _subscriptionChanges.close();
+    await _timelineChanges.close();
   }
 
   @override
@@ -75,6 +83,7 @@ class LocalTrackerRepository
     for (final tracker in trackers) {
       _detailChanges.add(tracker.id);
     }
+    _timelineChanges.add(null);
   }
 
   @override
@@ -94,6 +103,7 @@ class LocalTrackerRepository
     });
     await refreshOverview();
     _detailChanges.add(tracker.id);
+    _timelineChanges.add(null);
   }
 
   @override
@@ -106,6 +116,7 @@ class LocalTrackerRepository
     );
     await refreshOverview();
     _detailChanges.add(tracker.id);
+    _timelineChanges.add(null);
   }
 
   @override
@@ -164,6 +175,7 @@ class LocalTrackerRepository
     if (inserted != null) {
       await refreshOverview();
       _detailChanges.add(trackerId);
+      _timelineChanges.add(null);
     }
     return inserted;
   }
@@ -190,6 +202,7 @@ class LocalTrackerRepository
     if (trackerId != null) {
       await refreshOverview();
       _detailChanges.add(trackerId!);
+      _timelineChanges.add(null);
     }
   }
 
@@ -234,6 +247,96 @@ class LocalTrackerRepository
       orderBy: 'active DESC, next_charge_date ASC, name COLLATE NOCASE ASC',
     );
     return List.unmodifiable(rows.map(_subscriptionFromRow));
+  }
+
+  @override
+  Stream<void> watchTimelineChanges() async* {
+    yield null;
+    yield* _timelineChanges.stream;
+  }
+
+  @override
+  Future<TimelinePage> queryTimeline(
+    TimelineQuery query, {
+    int pageSize = 40,
+  }) async {
+    final args = <Object?>[];
+    final filters = <String>[];
+    final search = query.search.trim();
+    if (search.isNotEmpty) {
+      filters.add('LOWER(COALESCE(t.title, \'\')) LIKE ?');
+      args.add('%${search.toLowerCase()}%');
+    }
+    if (query.category != null) {
+      filters.add('t.category_key = ?');
+      args.add(query.category!.name);
+    }
+    if (query.cursor != null) {
+      filters.add('(c.completed_at < ? OR (c.completed_at = ? AND c.id < ?))');
+      final cursorTimestamp = query.cursor!.completedAt.toIso8601String();
+      args
+        ..add(cursorTimestamp)
+        ..add(cursorTimestamp)
+        ..add(query.cursor!.completionId);
+    }
+    final where = filters.isEmpty ? '' : 'WHERE ${filters.join(' AND ')}';
+    final rows = await database.rawQuery(
+      '''
+      SELECT c.id AS completion_id, c.tracker_id, c.completed_at,
+             t.title, t.category_key, t.icon_key, t.color_key,
+             t.repeat_rule, t.repeat_interval
+      FROM completions c
+      LEFT JOIN trackers t ON t.id = c.tracker_id
+      $where
+      ORDER BY c.completed_at DESC, c.id DESC
+      LIMIT ?
+    ''',
+      [...args, pageSize + 1],
+    );
+    final hasMore = rows.length > pageSize;
+    final visibleRows = hasMore ? rows.take(pageSize) : rows;
+    final entries = List<TimelineEntry>.unmodifiable(
+      visibleRows.map(_timelineEntryFromRow),
+    );
+    final monthlyCount =
+        Sqflite.firstIntValue(
+          await database.rawQuery(
+            'SELECT COUNT(*) FROM completions WHERE completed_at >= ? AND completed_at < ?',
+            [
+              query.monthStart.toIso8601String(),
+              query.monthEnd.toIso8601String(),
+            ],
+          ),
+        ) ??
+        0;
+    return TimelinePage(
+      entries: entries,
+      hasMore: hasMore,
+      monthlyCount: monthlyCount,
+    );
+  }
+
+  static TimelineEntry _timelineEntryFromRow(Map<String, Object?> row) {
+    final trackerExists = row['title'] != null;
+    final category = _categoryFrom(row['category_key'] as String?);
+    final iconKey = (row['icon_key'] as String?) ?? TrackerIconKeys.checklist;
+    final color = _colorFrom(row['color_key'] as String?);
+    final repeatRule = row['repeat_rule'] as String?;
+    final repeatInterval = row['repeat_interval'] as int? ?? 1;
+    final cadence = repeatRule == null
+        ? null
+        : RepeatRule.values.byName(repeatRule).labelFor(repeatInterval);
+    return TimelineEntry(
+      completionId: row['completion_id']! as String,
+      trackerId: row['tracker_id']! as String,
+      completedAt: DateTime.parse(row['completed_at']! as String),
+      title: (row['title'] as String?) ?? 'Removed tracker',
+      category: category,
+      iconKey: iconKey,
+      color: color,
+      cadence: cadence,
+      missingTracker: !trackerExists,
+    );
   }
 
   Future<TrackerDetails?> _queryDetails(String trackerId) async {

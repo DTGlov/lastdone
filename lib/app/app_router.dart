@@ -13,6 +13,8 @@ import '../features/subscriptions/presentation/subscriptions_view_model.dart';
 import '../features/subscriptions/presentation/subscription_editor_sheet.dart';
 import '../features/subscriptions/domain/subscription_repository.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
+import '../features/timeline/domain/timeline_repository.dart';
+import '../features/timeline/presentation/timeline_view_model.dart';
 import '../features/trackers/presentation/today_screen.dart';
 import '../features/trackers/presentation/tracker_detail_screen.dart';
 import '../features/trackers/presentation/tracker_detail_view_model.dart';
@@ -91,7 +93,25 @@ class AppRouter {
                  routes: [
                    GoRoute(
                      path: '/timeline',
-                     builder: (_, _) => const TimelineScreen(),
+                     builder: (context, _) {
+                       final trackerRepository = context
+                           .read<TrackerRepository>();
+                       final TimelineRepository timelineRepository;
+                       if (trackerRepository
+                           case final TimelineRepository value) {
+                         timelineRepository = value;
+                       } else {
+                         timelineRepository =
+                             const UnavailableTimelineRepository();
+                       }
+                       return ChangeNotifierProvider(
+                         create: (_) => TimelineViewModel(
+                           repository: timelineRepository,
+                           clock: context.read<AppClock>(),
+                         ),
+                         child: const TimelineScreen(),
+                       );
+                     },
                    ),
                  ],
                ),
