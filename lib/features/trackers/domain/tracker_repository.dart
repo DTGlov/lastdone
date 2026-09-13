@@ -26,6 +26,12 @@ abstract interface class TrackerOverviewRepository
   Future<void> refreshOverview();
 }
 
+abstract interface class TrackerArchiveRepository {
+  Stream<List<Tracker>> watchArchivedTrackers();
+  Future<void> archiveTracker(String trackerId, DateTime archivedAt);
+  Future<void> restoreTracker(String trackerId, DateTime restoredAt);
+}
+
 abstract interface class TrackerEditorRepository
     implements TrackerOverviewRepository {
   Future<void> createTracker(Tracker tracker, Completion? initialCompletion);

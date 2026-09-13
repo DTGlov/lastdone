@@ -16,7 +16,9 @@ import '../../profile/domain/profile_settings.dart';
 class LocalTrackerRepository
     implements
         TrackerCompletionRepository,
+        TrackerArchiveRepository,
         SubscriptionRepository,
+        SubscriptionCancellationRepository,
         TimelineRepository,
         ReminderRepository,
         ProfileStatisticsRepository {
@@ -25,9 +27,13 @@ class LocalTrackerRepository
   final AppClock? clock;
   final StreamController<List<TrackerOverview>> _overviewChanges =
       StreamController<List<TrackerOverview>>.broadcast(sync: true);
+  final StreamController<List<Tracker>> _archivedChanges =
+      StreamController<List<Tracker>>.broadcast(sync: true);
   final StreamController<String> _detailChanges =
       StreamController<String>.broadcast(sync: true);
   final StreamController<List<Subscription>> _subscriptionChanges =
+      StreamController<List<Subscription>>.broadcast(sync: true);
+  final StreamController<List<Subscription>> _cancelledSubscriptionChanges =
       StreamController<List<Subscription>>.broadcast(sync: true);
   final StreamController<void> _timelineChanges =
       StreamController<void>.broadcast(sync: true);
@@ -37,7 +43,11 @@ class LocalTrackerRepository
       StreamController<ProfileStatistics>.broadcast(sync: true);
   @override
   Future<List<Tracker>> listTrackers() async {
-    final rows = await database.query('trackers', orderBy: 'created_at ASC');
+    final rows = await database.query(
+      'trackers',
+      where: 'archived_at IS NULL',
+      orderBy: 'created_at ASC',
+    );
     return rows
         .map(
           (row) => Tracker(
@@ -49,6 +59,7 @@ class LocalTrackerRepository
             iconKey: (row['icon_key'] as String?) ?? TrackerIconKeys.checklist,
             color: _colorFrom(row['color_key'] as String?),
             firstDueDate: _dateOnlyOrNull(row['first_due_date'] as String?),
+            archivedAt: _dateTimeOrNull(row['archived_at'] as String?),
             createdAt: DateTime.parse(row['created_at']! as String),
             updatedAt: DateTime.parse(row['updated_at']! as String),
           ),
@@ -69,8 +80,10 @@ class LocalTrackerRepository
 
   Future<void> dispose() async {
     await _overviewChanges.close();
+    await _archivedChanges.close();
     await _detailChanges.close();
     await _subscriptionChanges.close();
+    await _cancelledSubscriptionChanges.close();
     await _timelineChanges.close();
     await _reminderChanges.close();
     await _profileChanges.close();
@@ -133,6 +146,45 @@ class LocalTrackerRepository
     );
     await refreshOverview();
     _detailChanges.add(tracker.id);
+    _timelineChanges.add(null);
+    _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
+  }
+
+  @override
+  Stream<List<Tracker>> watchArchivedTrackers() async* {
+    yield await _queryArchivedTrackers();
+    yield* _archivedChanges.stream;
+  }
+
+  @override
+  Future<void> archiveTracker(String trackerId, DateTime archivedAt) async {
+    await database.update(
+      'trackers',
+      {
+        'archived_at': archivedAt.toIso8601String(),
+        'updated_at': archivedAt.toIso8601String(),
+      },
+      where: 'id = ? AND archived_at IS NULL',
+      whereArgs: [trackerId],
+    );
+    await _publishTrackerChanges(trackerId);
+  }
+
+  @override
+  Future<void> restoreTracker(String trackerId, DateTime restoredAt) async {
+    await database.update(
+      'trackers',
+      {'archived_at': null, 'updated_at': restoredAt.toIso8601String()},
+      where: 'id = ? AND archived_at IS NOT NULL',
+      whereArgs: [trackerId],
+    );
+    await _publishTrackerChanges(trackerId);
+  }
+
+  Future<void> _publishTrackerChanges(String trackerId) async {
+    await refreshOverview();
+    _archivedChanges.add(await _queryArchivedTrackers());
+    _detailChanges.add(trackerId);
     _timelineChanges.add(null);
     _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
   }
@@ -251,12 +303,54 @@ class LocalTrackerRepository
   }
 
   @override
+  Stream<List<Subscription>> watchCancelledSubscriptions() async* {
+    yield await _queryCancelledSubscriptions();
+    yield* _cancelledSubscriptionChanges.stream;
+  }
+
+  @override
+  Future<void> cancelSubscription(String id, DateTime cancelledAt) async {
+    await database.update(
+      'subscriptions',
+      {
+        'active': 0,
+        'cancelled_at': cancelledAt.toIso8601String(),
+        'updated_at': cancelledAt.toIso8601String(),
+      },
+      where: 'id = ? AND active = 1',
+      whereArgs: [id],
+    );
+    await _publishSubscriptionChanges();
+  }
+
+  @override
+  Future<void> restoreSubscription(String id, DateTime restoredAt) async {
+    await database.update(
+      'subscriptions',
+      {
+        'active': 1,
+        'cancelled_at': null,
+        'updated_at': restoredAt.toIso8601String(),
+      },
+      where: 'id = ? AND active = 0',
+      whereArgs: [id],
+    );
+    await _publishSubscriptionChanges();
+  }
+
+  Future<void> _publishSubscriptionChanges() async {
+    _subscriptionChanges.add(await _querySubscriptions());
+    _cancelledSubscriptionChanges.add(await _queryCancelledSubscriptions());
+    _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
+  }
+
+  @override
   Future<ProfileStatistics> getStatistics(DateTime now) async {
     final local = now.toLocal();
     final monthStart = DateTime(local.year, local.month);
     final monthEnd = DateTime(local.year, local.month + 1);
     final activeTrackers = await database.rawQuery(
-      'SELECT COUNT(*) FROM trackers',
+      'SELECT COUNT(*) FROM trackers WHERE archived_at IS NULL',
     );
     final monthCompletions = await database.rawQuery(
       'SELECT COUNT(*) FROM completions WHERE completed_at >= ? AND completed_at < ?',
@@ -282,6 +376,7 @@ class LocalTrackerRepository
         'category': SubscriptionCategory.custom.name,
         'next_charge_date': monthStart.toIso8601String(),
         'active': 1,
+        'cancelled_at': null,
         'created_at': monthStart.toIso8601String(),
         'updated_at': monthStart.toIso8601String(),
       });
@@ -596,6 +691,7 @@ class LocalTrackerRepository
         ORDER BY latest.completed_at DESC, latest.id DESC
         LIMIT 1
       )
+      WHERE t.archived_at IS NULL
       ORDER BY t.created_at ASC
     ''');
     return List<TrackerOverview>.unmodifiable(
@@ -625,6 +721,7 @@ class LocalTrackerRepository
     'icon_key': tracker.iconKey,
     'color_key': tracker.color.name,
     'first_due_date': tracker.firstDueDate?.toIso8601String(),
+    'archived_at': tracker.archivedAt?.toIso8601String(),
     'created_at': tracker.createdAt.toIso8601String(),
     'updated_at': tracker.updatedAt.toIso8601String(),
   };
@@ -638,6 +735,7 @@ class LocalTrackerRepository
     iconKey: (row['icon_key'] as String?) ?? TrackerIconKeys.checklist,
     color: _colorFrom(row['color_key'] as String?),
     firstDueDate: _dateOnlyOrNull(row['first_due_date'] as String?),
+    archivedAt: _dateTimeOrNull(row['archived_at'] as String?),
     createdAt: DateTime.parse(row['created_at']! as String),
     updatedAt: DateTime.parse(row['updated_at']! as String),
   );
@@ -648,6 +746,27 @@ class LocalTrackerRepository
     if (parsed == null) return null;
     final local = parsed.toLocal();
     return DateTime(local.year, local.month, local.day);
+  }
+
+  static DateTime? _dateTimeOrNull(String? value) =>
+      value == null ? null : DateTime.tryParse(value);
+
+  Future<List<Tracker>> _queryArchivedTrackers() async {
+    final rows = await database.query(
+      'trackers',
+      where: 'archived_at IS NOT NULL',
+      orderBy: 'archived_at DESC, id ASC',
+    );
+    return List.unmodifiable(rows.map(_trackerFromRow));
+  }
+
+  Future<List<Subscription>> _queryCancelledSubscriptions() async {
+    final rows = await database.query(
+      'subscriptions',
+      where: 'active = 0',
+      orderBy: 'cancelled_at DESC, id ASC',
+    );
+    return List.unmodifiable(rows.map(_subscriptionFromRow));
   }
 
   static Subscription _subscriptionFromRow(Map<String, Object?> row) =>
@@ -665,6 +784,7 @@ class LocalTrackerRepository
         nextChargeDate: DateTime.parse(row['next_charge_date']! as String),
         active: (row['active']! as int) == 1,
         note: row['note'] as String?,
+        cancelledAt: _dateTimeOrNull(row['cancelled_at'] as String?),
         createdAt: DateTime.parse(row['created_at']! as String),
         updatedAt: DateTime.parse(row['updated_at']! as String),
       );
@@ -681,6 +801,7 @@ class LocalTrackerRepository
     'next_charge_date': value.nextChargeDate.toIso8601String(),
     'active': value.active ? 1 : 0,
     'note': value.note,
+    'cancelled_at': value.cancelledAt?.toIso8601String(),
     'created_at': value.createdAt.toIso8601String(),
     'updated_at': value.updatedAt.toIso8601String(),
   };
