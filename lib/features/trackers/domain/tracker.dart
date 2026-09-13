@@ -23,4 +23,13 @@ class Completion {
   final DateTime completedAt;
 }
 
-enum RepeatRule { daily, weekly, monthly, yearly }
+enum RepeatRule {
+  daily,
+  weekly,
+  everyTwoWeeks,
+  everyThreeWeeks,
+  monthly,
+  everyThreeMonths,
+  everyFourMonths,
+  yearly,
+}
