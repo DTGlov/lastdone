@@ -2,7 +2,7 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseBootstrap {
-  static const version = 3;
+  static const version = 4;
   static Future<Database> open({
     String? databasePath,
     DatabaseFactory? factory,
@@ -36,6 +36,7 @@ class DatabaseBootstrap {
         await db.execute(
           'CREATE INDEX subscriptions_next_charge ON subscriptions (active, next_charge_date)',
         );
+        await _createReminders(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -65,7 +66,26 @@ class DatabaseBootstrap {
             'CREATE INDEX subscriptions_next_charge ON subscriptions (active, next_charge_date)',
           );
         }
+        if (oldVersion < 4) await _createReminders(db);
       },
     ),
   );
+
+  static Future<void> _createReminders(DatabaseExecutor db) async {
+    await db.execute('''CREATE TABLE reminder_preferences (
+        notification_id INTEGER PRIMARY KEY,
+        target_type TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 0,
+        lead_days INTEGER NOT NULL DEFAULT 0,
+        local_hour INTEGER NOT NULL DEFAULT 9,
+        local_minute INTEGER NOT NULL DEFAULT 0,
+        last_occurrence_key TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(target_type, target_id))''');
+    await db.execute(
+      'CREATE INDEX reminder_preferences_enabled ON reminder_preferences (enabled)',
+    );
+  }
 }

@@ -6,6 +6,7 @@ import '../../../core/time/app_clock.dart';
 import '../../../core/widgets/dun_view.dart';
 import '../domain/subscription.dart';
 import '../domain/subscription_repository.dart';
+import '../../reminders/domain/reminder_repository.dart';
 import 'subscription_editor_sheet.dart';
 import 'subscriptions_view_model.dart';
 
@@ -233,6 +234,7 @@ class _SubscriptionTile extends StatelessWidget {
       repository: context.read<SubscriptionRepository>(),
       clock: context.read<AppClock>(),
       subscription: subscription,
+      reminderRepository: context.read<ReminderRepository>(),
     );
     if (result == true && context.mounted) {
       ScaffoldMessenger.of(context)
@@ -280,6 +282,7 @@ class _EmptyState extends StatelessWidget {
       context: context,
       repository: context.read<SubscriptionRepository>(),
       clock: context.read<AppClock>(),
+      reminderRepository: context.read<ReminderRepository>(),
     );
     if (result == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

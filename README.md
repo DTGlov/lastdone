@@ -12,5 +12,6 @@ Today now shows onboarding-created trackers in due-aware Needs attention, Coming
 Today tracker cards now open detail pages where completions can be recorded and briefly undone.
 Subscriptions now have a dedicated tab for local recurring-cost tracking, per-currency monthly estimates, and upcoming charges.
 Timeline now provides a chronological, searchable history of persisted tracker completions.
+Optional local reminders can nudge users before scheduled trackers are due or active subscriptions renew; permission is requested only when a reminder is enabled.
 
 The refreshed interface uses compact warm surfaces, local Dun mascot states, and recognizable local catalog marks without runtime network requests.

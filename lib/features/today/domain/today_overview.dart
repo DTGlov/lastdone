@@ -71,7 +71,7 @@ class TodayClassifier {
       }
 
       final completedOn = _dateOnly(completion.completedAt);
-      final nextDueDate = _nextDueDate(completedOn, tracker);
+      final nextDueDate = nextDueDateFor(completedOn, tracker);
       final status = _statusFor(
         today: today,
         completedOn: completedOn,
@@ -166,7 +166,7 @@ class TodayClassifier {
   static int _titleCompare(TodayTracker a, TodayTracker b) =>
       a.tracker.title.toLowerCase().compareTo(b.tracker.title.toLowerCase());
 
-  static DateTime? _nextDueDate(
+  static DateTime? nextDueDateFor(
     DateTime completedOn,
     Tracker tracker,
   ) => switch (tracker.repeatRule) {

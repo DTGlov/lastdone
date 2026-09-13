@@ -8,12 +8,15 @@ import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
 import '../../timeline/domain/timeline.dart';
 import '../../timeline/domain/timeline_repository.dart';
+import '../../reminders/domain/reminder.dart';
+import '../../reminders/domain/reminder_repository.dart';
 
 class LocalTrackerRepository
     implements
         TrackerCompletionRepository,
         SubscriptionRepository,
-        TimelineRepository {
+        TimelineRepository,
+        ReminderRepository {
   LocalTrackerRepository({required this.database});
   final Database database;
   final StreamController<List<TrackerOverview>> _overviewChanges =
@@ -24,6 +27,8 @@ class LocalTrackerRepository
       StreamController<List<Subscription>>.broadcast(sync: true);
   final StreamController<void> _timelineChanges =
       StreamController<void>.broadcast(sync: true);
+  final StreamController<List<ReminderPreference>> _reminderChanges =
+      StreamController<List<ReminderPreference>>.broadcast(sync: true);
   @override
   Future<List<Tracker>> listTrackers() async {
     final rows = await database.query('trackers', orderBy: 'created_at ASC');
@@ -60,6 +65,7 @@ class LocalTrackerRepository
     await _detailChanges.close();
     await _subscriptionChanges.close();
     await _timelineChanges.close();
+    await _reminderChanges.close();
   }
 
   @override
@@ -239,6 +245,139 @@ class LocalTrackerRepository
       ),
     );
     _subscriptionChanges.add(await _querySubscriptions());
+  }
+
+  @override
+  Future<Subscription?> getSubscription(String id) async {
+    final rows = await database.query(
+      'subscriptions',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : _subscriptionFromRow(rows.first);
+  }
+
+  @override
+  Stream<List<ReminderPreference>> watchPreferences() async* {
+    yield await _queryReminders();
+    yield* _reminderChanges.stream;
+  }
+
+  @override
+  Future<List<ReminderPreference>> listPreferences() => _queryReminders();
+
+  @override
+  Future<ReminderPreference?> getPreference(ReminderTarget target) async {
+    final rows = await database.query(
+      'reminder_preferences',
+      where: 'target_type = ? AND target_id = ?',
+      whereArgs: [target.type.name, target.id],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : _reminderFromRow(rows.first);
+  }
+
+  @override
+  Future<ReminderPreference> savePreference(
+    ReminderDraft draft,
+    DateTime now,
+  ) async {
+    if (draft.localHour < 0 ||
+        draft.localHour > 23 ||
+        draft.localMinute < 0 ||
+        draft.localMinute > 59) {
+      throw ArgumentError('Invalid reminder time');
+    }
+    late ReminderPreference result;
+    await database.transaction((transaction) async {
+      final existing = await transaction.query(
+        'reminder_preferences',
+        where: 'target_type = ? AND target_id = ?',
+        whereArgs: [draft.target.type.name, draft.target.id],
+        limit: 1,
+      );
+      final createdAt = existing.isEmpty
+          ? now
+          : DateTime.parse(existing.first['created_at']! as String);
+      final notificationId = existing.isEmpty
+          ? await _nextReminderId(transaction)
+          : existing.first['notification_id']! as int;
+      final values = {
+        'notification_id': notificationId,
+        'target_type': draft.target.type.name,
+        'target_id': draft.target.id,
+        'enabled': draft.enabled ? 1 : 0,
+        'lead_days': draft.leadTime.days,
+        'local_hour': draft.localHour,
+        'local_minute': draft.localMinute,
+        'last_occurrence_key': null,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': now.toIso8601String(),
+      };
+      await transaction.insert(
+        'reminder_preferences',
+        values,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      result = ReminderPreference(
+        notificationId: notificationId,
+        target: draft.target,
+        enabled: draft.enabled,
+        leadTime: draft.leadTime,
+        localHour: draft.localHour,
+        localMinute: draft.localMinute,
+        createdAt: createdAt,
+        updatedAt: now,
+      );
+    });
+    _reminderChanges.add(await _queryReminders());
+    return result;
+  }
+
+  @override
+  Future<int> countEnabled(ReminderTargetType type) async {
+    final result = await database.rawQuery(
+      'SELECT COUNT(*) FROM reminder_preferences WHERE enabled = 1 AND target_type = ?',
+      [type.name],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<List<ReminderPreference>> _queryReminders() async {
+    final rows = await database.query(
+      'reminder_preferences',
+      orderBy: 'target_type ASC, target_id ASC',
+    );
+    return List.unmodifiable(rows.map(_reminderFromRow));
+  }
+
+  static ReminderPreference _reminderFromRow(Map<String, Object?> row) {
+    final targetType = ReminderTargetType.values.byName(
+      row['target_type']! as String,
+    );
+    return ReminderPreference(
+      notificationId: row['notification_id']! as int,
+      target: ReminderTarget(targetType, row['target_id']! as String),
+      enabled: row['enabled']! as int == 1,
+      leadTime: ReminderLeadTime.fromDays(row['lead_days']! as int),
+      localHour: row['local_hour']! as int,
+      localMinute: row['local_minute']! as int,
+      lastScheduledOccurrenceKey: row['last_occurrence_key'] as String?,
+      createdAt: DateTime.parse(row['created_at']! as String),
+      updatedAt: DateTime.parse(row['updated_at']! as String),
+    );
+  }
+
+  static Future<int> _nextReminderId(DatabaseExecutor executor) async {
+    final rows = await executor.rawQuery(
+      'SELECT COALESCE(MAX(notification_id), 1000) + 1 AS next_id FROM reminder_preferences',
+    );
+    final id = rows.first['next_id']! as int;
+    if (id >= 2000000000) {
+      throw StateError('Reminder identifier space exhausted');
+    }
+    return id;
   }
 
   Future<List<Subscription>> _querySubscriptions() async {

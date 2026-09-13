@@ -6,6 +6,9 @@ import '../../../core/design_system/design_tokens.dart';
 import '../../../core/time/app_clock.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
+import '../../reminders/domain/reminder.dart';
+import '../../reminders/domain/reminder_repository.dart';
+import '../../reminders/data/notification_gateway.dart';
 import 'tracker_editor_view_model.dart';
 
 Future<bool?> showTrackerEditor({
@@ -13,6 +16,7 @@ Future<bool?> showTrackerEditor({
   required TrackerRepository repository,
   required AppClock clock,
   TrackerOverview? overview,
+  ReminderRepository? reminderRepository,
 }) => showModalBottomSheet<bool>(
   context: context,
   isScrollControlled: true,
@@ -20,11 +24,16 @@ Future<bool?> showTrackerEditor({
   showDragHandle: true,
   builder: (_) => ChangeNotifierProvider(
     create: (_) => overview == null
-        ? TrackerEditorViewModel.create(repository: repository, clock: clock)
+        ? TrackerEditorViewModel.create(
+            repository: repository,
+            clock: clock,
+            reminderRepository: reminderRepository,
+          )
         : TrackerEditorViewModel.edit(
             repository: repository,
             clock: clock,
             overview: overview,
+            reminderRepository: reminderRepository,
           ),
     child: const TrackerEditorSheet(),
   ),
@@ -85,6 +94,10 @@ class _TrackerEditorSheetState extends State<TrackerEditorSheet> {
                   _CompletionField(model: model),
                   const SizedBox(height: AppSpacing.lg),
                   _ScheduleField(model: model),
+                  if (model.reminderRepository != null) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _ReminderField(model: model),
+                  ],
                   if (model.errorMessage != null) ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
@@ -115,7 +128,49 @@ class _TrackerEditorSheetState extends State<TrackerEditorSheet> {
   }
 
   Future<void> _save(TrackerEditorViewModel model) async {
+    if (model.reminderEnabled && model.repeatUnit != RepeatUnit.none) {
+      await _offerReminderPermission();
+    }
     if (await model.save() && mounted) context.pop(true);
+  }
+
+  Future<void> _offerReminderPermission() async {
+    final gateway = context.read<NotificationGateway>();
+    final status = await gateway.permissionStatus();
+    if (status == NotificationPermissionStatus.authorized || !mounted) return;
+    final allow = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'A gentle reminder?',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'LastDone can nudge you locally before this tracker is due. Nothing is sent to a server.',
+              ),
+              const SizedBox(height: AppSpacing.md),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Allow reminders'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Not now'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (allow == true) await gateway.requestPermission();
   }
 
   Future<void> _confirmDiscard(TrackerEditorViewModel model) async {
@@ -422,6 +477,66 @@ class _ScheduleField extends StatelessWidget {
       Text(model.cadencePreview, style: Theme.of(context).textTheme.bodySmall),
     ],
   );
+}
+
+class _ReminderField extends StatelessWidget {
+  const _ReminderField({required this.model});
+  final TrackerEditorViewModel model;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheduled = model.repeatUnit != RepeatUnit.none;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Gentle reminder'),
+          subtitle: Text(
+            scheduled
+                ? 'A local nudge before this is due.'
+                : 'Add a schedule before enabling reminders.',
+          ),
+          value: model.reminderEnabled && scheduled,
+          onChanged: scheduled ? model.setReminderEnabled : null,
+        ),
+        if (model.reminderEnabled && scheduled) ...[
+          DropdownButtonFormField<ReminderLeadTime>(
+            initialValue: model.reminderLeadTime,
+            decoration: const InputDecoration(labelText: 'Remind me'),
+            items: ReminderLeadTime.values
+                .map(
+                  (value) =>
+                      DropdownMenuItem(value: value, child: Text(value.label)),
+                )
+                .toList(),
+            onChanged: (value) {
+              if (value != null) model.setReminderLeadTime(value);
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          OutlinedButton.icon(
+            onPressed: () => _chooseTime(context),
+            icon: const Icon(Icons.schedule_outlined),
+            label: Text(
+              'At ${TimeOfDay(hour: model.reminderHour, minute: model.reminderMinute).format(context)}',
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _chooseTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: model.reminderHour,
+        minute: model.reminderMinute,
+      ),
+    );
+    if (picked != null) model.setReminderTime(picked.hour, picked.minute);
+  }
 }
 
 class _ChoiceButton extends StatelessWidget {

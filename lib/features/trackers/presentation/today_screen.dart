@@ -9,6 +9,7 @@ import '../../today/domain/today_overview.dart';
 import '../../today/presentation/today_view_model.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
+import '../../reminders/domain/reminder_repository.dart';
 import 'tracker_editor_sheet.dart';
 
 class TodayScreen extends StatelessWidget {
@@ -500,6 +501,7 @@ Future<void> _createTrackerFromEmpty(BuildContext context) async {
     context: context,
     repository: context.read<TrackerRepository>(),
     clock: context.read<AppClock>(),
+    reminderRepository: context.read<ReminderRepository>(),
   );
   if (result == true && context.mounted) {
     ScaffoldMessenger.of(context)

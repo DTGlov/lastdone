@@ -9,6 +9,7 @@ import '../../../core/widgets/dun_view.dart';
 import '../../today/domain/today_overview.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
+import '../../reminders/domain/reminder_repository.dart';
 import 'tracker_editor_sheet.dart';
 import 'tracker_detail_view_model.dart';
 
@@ -98,6 +99,7 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
         tracker: details.tracker,
         latestCompletion: details.latestCompletion,
       ),
+      reminderRepository: context.read<ReminderRepository>(),
     );
   }
 

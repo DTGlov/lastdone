@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/time/app_clock.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
+import '../../reminders/domain/reminder.dart';
+import '../../reminders/domain/reminder_repository.dart';
 
 enum TrackerEditorMode { create, edit }
 
@@ -14,21 +18,25 @@ class TrackerEditorViewModel extends ChangeNotifier {
   TrackerEditorViewModel.create({
     required TrackerRepository repository,
     required AppClock clock,
+    ReminderRepository? reminderRepository,
   }) : this._(
          repository: repository,
          clock: clock,
          mode: TrackerEditorMode.create,
+         reminderRepository: reminderRepository,
        );
 
   TrackerEditorViewModel.edit({
     required TrackerRepository repository,
     required AppClock clock,
     required TrackerOverview overview,
+    ReminderRepository? reminderRepository,
   }) : this._(
          repository: repository,
          clock: clock,
          mode: TrackerEditorMode.edit,
          overview: overview,
+         reminderRepository: reminderRepository,
        );
 
   TrackerEditorViewModel._({
@@ -36,6 +44,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
     required this.clock,
     required this.mode,
     TrackerOverview? overview,
+    this.reminderRepository,
   }) : original = overview?.tracker,
        latestCompletion = overview?.latestCompletion {
     final tracker = overview?.tracker;
@@ -60,12 +69,26 @@ class TrackerEditorViewModel extends ChangeNotifier {
     _initialRepeatInterval = repeatInterval;
     nameController.addListener(notifyListeners);
     intervalController.addListener(notifyListeners);
+    unawaited(_loadReminder());
+  }
+
+  Future<void> _loadReminder() async {
+    final value = await reminderRepository?.getPreference(
+      ReminderTarget(ReminderTargetType.tracker, original?.id ?? ''),
+    );
+    if (value == null) return;
+    reminderEnabled = value.enabled;
+    reminderLeadTime = value.leadTime;
+    reminderHour = value.localHour;
+    reminderMinute = value.localMinute;
+    notifyListeners();
   }
 
   final TrackerRepository repository;
   final AppClock clock;
   final TrackerEditorMode mode;
   final Tracker? original;
+  final ReminderRepository? reminderRepository;
   final Completion? latestCompletion;
   late final TextEditingController nameController;
   late final TextEditingController intervalController;
@@ -80,6 +103,10 @@ class TrackerEditorViewModel extends ChangeNotifier {
   String? intervalError;
   String? errorMessage;
   bool isSaving = false;
+  bool reminderEnabled = false;
+  ReminderLeadTime reminderLeadTime = ReminderLeadTime.onDay;
+  int reminderHour = 9;
+  int reminderMinute = 0;
   late final String _initialName;
   late final String _initialInterval;
   late final TrackerCategory _initialCategory;
@@ -147,6 +174,22 @@ class TrackerEditorViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setReminderEnabled(bool value) {
+    reminderEnabled = value;
+    notifyListeners();
+  }
+
+  void setReminderLeadTime(ReminderLeadTime value) {
+    reminderLeadTime = value;
+    notifyListeners();
+  }
+
+  void setReminderTime(int hour, int minute) {
+    reminderHour = hour;
+    reminderMinute = minute;
+    notifyListeners();
+  }
+
   void setDate(DateTime value) {
     selectedDate = _dateOnly(value);
     initialCompletion = InitialCompletionChoice.date;
@@ -192,6 +235,19 @@ class TrackerEditorViewModel extends ChangeNotifier {
         await editorRepository.createTracker(tracker, completion);
       } else {
         await editorRepository.updateTracker(tracker);
+      }
+      final reminderStore = reminderRepository;
+      if (reminderStore != null) {
+        await reminderStore.savePreference(
+          ReminderDraft(
+            target: ReminderTarget(ReminderTargetType.tracker, tracker.id),
+            enabled: reminderEnabled && repeatUnit != RepeatUnit.none,
+            leadTime: reminderLeadTime,
+            localHour: reminderHour,
+            localMinute: reminderMinute,
+          ),
+          now,
+        );
       }
       isSaving = false;
       notifyListeners();

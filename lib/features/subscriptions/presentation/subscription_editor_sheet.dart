@@ -9,6 +9,9 @@ import '../../../core/time/app_clock.dart';
 import '../domain/subscription.dart';
 import '../domain/subscription_catalog.dart';
 import '../domain/subscription_repository.dart';
+import '../../reminders/domain/reminder.dart';
+import '../../reminders/domain/reminder_repository.dart';
+import '../../reminders/data/notification_gateway.dart';
 import 'subscription_editor_view_model.dart';
 
 Future<bool?> showSubscriptionEditor({
@@ -16,6 +19,7 @@ Future<bool?> showSubscriptionEditor({
   required SubscriptionRepository repository,
   required AppClock clock,
   Subscription? subscription,
+  ReminderRepository? reminderRepository,
 }) => showModalBottomSheet<bool>(
   context: context,
   isScrollControlled: true,
@@ -26,11 +30,13 @@ Future<bool?> showSubscriptionEditor({
         ? SubscriptionEditorViewModel.create(
             repository: repository,
             clock: clock,
+            reminderRepository: reminderRepository,
           )
         : SubscriptionEditorViewModel.edit(
             repository: repository,
             clock: clock,
             subscription: subscription,
+            reminderRepository: reminderRepository,
           ),
     child: const SubscriptionEditorSheet(),
   ),
@@ -116,6 +122,10 @@ class _SubscriptionEditorSheetState extends State<SubscriptionEditorSheet> {
                   _DateField(model: model),
                   const SizedBox(height: AppSpacing.md),
                   _FrequencyField(model: model),
+                  if (model.reminderRepository != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _ReminderField(model: model),
+                  ],
                   if (!model.isCreate) ...[
                     const SizedBox(height: AppSpacing.md),
                     SwitchListTile.adaptive(
@@ -158,7 +168,47 @@ class _SubscriptionEditorSheetState extends State<SubscriptionEditorSheet> {
   }
 
   Future<void> _save(SubscriptionEditorViewModel model) async {
+    if (model.reminderEnabled && model.active) await _offerReminderPermission();
     if (await model.save() && mounted) context.pop(true);
+  }
+
+  Future<void> _offerReminderPermission() async {
+    final gateway = context.read<NotificationGateway>();
+    final status = await gateway.permissionStatus();
+    if (status == NotificationPermissionStatus.authorized || !mounted) return;
+    final allow = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'A gentle reminder?',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'LastDone can give you a local heads-up before this subscription renews. Nothing is sent to a server.',
+              ),
+              const SizedBox(height: AppSpacing.md),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Allow reminders'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Not now'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (allow == true) await gateway.requestPermission();
   }
 
   Future<void> _confirmDiscard(SubscriptionEditorViewModel model) async {
@@ -335,6 +385,63 @@ class _CurrencyField extends StatelessWidget {
       if (value != null) model.setCurrency(value);
     },
   );
+}
+
+class _ReminderField extends StatelessWidget {
+  const _ReminderField({required this.model});
+  final SubscriptionEditorViewModel model;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Gentle reminder'),
+        subtitle: Text(
+          model.active
+              ? 'A local heads-up before the next charge.'
+              : 'Reactivate this subscription before enabling delivery.',
+        ),
+        value: model.reminderEnabled && model.active,
+        onChanged: model.active ? model.setReminderEnabled : null,
+      ),
+      if (model.reminderEnabled && model.active) ...[
+        DropdownButtonFormField<ReminderLeadTime>(
+          initialValue: model.reminderLeadTime,
+          decoration: const InputDecoration(labelText: 'Remind me'),
+          items: ReminderLeadTime.values
+              .map(
+                (value) =>
+                    DropdownMenuItem(value: value, child: Text(value.label)),
+              )
+              .toList(),
+          onChanged: (value) {
+            if (value != null) model.setReminderLeadTime(value);
+          },
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        OutlinedButton.icon(
+          onPressed: () => _chooseTime(context),
+          icon: const Icon(Icons.schedule_outlined),
+          label: Text(
+            'At ${TimeOfDay(hour: model.reminderHour, minute: model.reminderMinute).format(context)}',
+          ),
+        ),
+      ],
+    ],
+  );
+
+  Future<void> _chooseTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: model.reminderHour,
+        minute: model.reminderMinute,
+      ),
+    );
+    if (picked != null) model.setReminderTime(picked.hour, picked.minute);
+  }
 }
 
 class _DateField extends StatelessWidget {

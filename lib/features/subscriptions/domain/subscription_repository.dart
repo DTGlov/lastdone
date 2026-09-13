@@ -5,6 +5,7 @@ abstract interface class SubscriptionRepository {
   Future<void> refreshSubscriptions();
   Future<void> createSubscription(Subscription subscription);
   Future<void> updateSubscription(Subscription subscription);
+  Future<Subscription?> getSubscription(String id);
 }
 
 class UnavailableSubscriptionRepository implements SubscriptionRepository {
@@ -23,4 +24,7 @@ class UnavailableSubscriptionRepository implements SubscriptionRepository {
   @override
   Future<void> updateSubscription(Subscription subscription) =>
       Future.error(StateError('Subscription storage is unavailable'));
+
+  @override
+  Future<Subscription?> getSubscription(String id) async => null;
 }
