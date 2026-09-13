@@ -19,13 +19,17 @@ Future<void> bootstrap() async {
   final preferences = await SharedPreferences.getInstance();
   final statusStore = SharedPreferencesOnboardingStatusStore(preferences);
   final onboardingComplete = await statusStore.isComplete();
+  final trackerRepository = LocalTrackerRepository(database: database);
   runApp(
     LastDoneApp(
       clock: SystemAppClock(),
-      trackerRepository: LocalTrackerRepository(database: database),
+      trackerRepository: trackerRepository,
       statusStore: statusStore,
       onboardingComplete: onboardingComplete,
-      onDispose: database.close,
+      onDispose: () async {
+        await trackerRepository.dispose();
+        await database.close();
+      },
     ),
   );
 }
