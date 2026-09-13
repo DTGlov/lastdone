@@ -8,6 +8,12 @@ abstract interface class SubscriptionRepository {
   Future<Subscription?> getSubscription(String id);
 }
 
+abstract interface class SubscriptionCancellationRepository {
+  Stream<List<Subscription>> watchCancelledSubscriptions();
+  Future<void> cancelSubscription(String id, DateTime cancelledAt);
+  Future<void> restoreSubscription(String id, DateTime restoredAt);
+}
+
 class UnavailableSubscriptionRepository implements SubscriptionRepository {
   const UnavailableSubscriptionRepository();
 

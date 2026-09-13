@@ -4,12 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
+import '../../../core/design_system/lastdone_dialog.dart';
 import '../../../core/time/app_clock.dart';
 import '../../../core/widgets/dun_view.dart';
+import '../../../core/widgets/app_feedback.dart';
 import '../../today/domain/today_overview.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
 import '../../reminders/domain/reminder_repository.dart';
+import '../../reminders/domain/reminder.dart';
+import '../../reminders/data/notification_gateway.dart';
 import 'tracker_editor_sheet.dart';
 import 'tracker_detail_view_model.dart';
 
@@ -28,6 +32,7 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
     duration: const Duration(milliseconds: 900),
   );
   bool _celebrating = false;
+  bool _archiving = false;
 
   @override
   Widget build(BuildContext context) {
@@ -39,8 +44,8 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
           if (model.details != null)
             IconButton(
               tooltip: 'Edit tracker',
-              onPressed: () => _edit(context, model),
               icon: const Icon(Icons.edit_outlined),
+              onPressed: () => _edit(context, model),
             ),
         ],
       ),
@@ -63,6 +68,7 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
               celebrating: _celebrating,
               celebrationAnimation: _celebrationController,
               onComplete: () => _complete(model),
+              onArchive: () => _archive(context, model),
               key: const ValueKey('content'),
             ),
           },
@@ -103,6 +109,66 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
     );
   }
 
+  Future<void> _archive(
+    BuildContext context,
+    TrackerDetailViewModel model,
+  ) async {
+    if (_archiving || model.details?.tracker.archivedAt != null) return;
+    final confirmed = await showLastDoneDialog<bool>(
+      context: context,
+      title: 'Archive tracker?',
+      message: 'It will leave Today and its reminders will stop. Completion history stays safe, and you can restore it later.',
+      variant: LastDoneDialogVariant.confirmation,
+      icon: Icons.archive_outlined,
+      primaryLabel: 'Archive tracker',
+      primaryResult: true,
+      secondaryLabel: 'Keep tracker',
+      secondaryResult: false,
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _archiving = true);
+    final repository = context.read<TrackerRepository>();
+    final clock = context.read<AppClock>();
+    final reminders = context.read<ReminderRepository>();
+    final gateway = context.read<NotificationGateway>();
+    var reminderFailed = false;
+    try {
+      if (repository case final TrackerArchiveRepository archiveRepository) {
+        await archiveRepository.archiveTracker(widget.trackerId, clock.now);
+        try {
+          final preference = await reminders.getPreference(
+            ReminderTarget(ReminderTargetType.tracker, widget.trackerId),
+          );
+          if (preference != null) {
+            await gateway.cancel(preference.notificationId);
+          }
+        } catch (_) {
+          reminderFailed = true;
+        }
+        if (mounted) {
+          context.go('/today');
+          showAppFeedback(
+            reminderFailed
+                ? 'Tracker archived. Its reminder will be cleaned up shortly.'
+                : 'Tracker archived. Its history is still safe.',
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        await showLastDoneDialog<void>(
+          context: context,
+          title: 'Tracker not archived',
+          message: 'We could not archive this tracker yet. Please try again.',
+          variant: LastDoneDialogVariant.error,
+          primaryLabel: 'Okay',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _archiving = false);
+    }
+  }
+
   @override
   void dispose() {
     _celebrationController.dispose();
@@ -116,12 +182,14 @@ class _DetailContent extends StatelessWidget {
     required this.celebrating,
     required this.celebrationAnimation,
     required this.onComplete,
+    required this.onArchive,
     super.key,
   });
   final TrackerDetailViewModel model;
   final bool celebrating;
   final Animation<double> celebrationAnimation;
   final VoidCallback onComplete;
+  final VoidCallback onArchive;
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +224,7 @@ class _DetailContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           FilledButton.icon(
-            style: model.completedToday
+            style: model.completedToday || tracker.archivedAt != null
                 ? FilledButton.styleFrom(
                     backgroundColor: Theme.of(context)
                         .colorScheme
@@ -164,14 +232,41 @@ class _DetailContent extends StatelessWidget {
                     foregroundColor: Theme.of(context).colorScheme.onSurface,
                   )
                 : null,
-            onPressed: model.isCompleting || model.completedToday || celebrating
+            onPressed:
+                model.isCompleting ||
+                    model.completedToday ||
+                    celebrating ||
+                    tracker.archivedAt != null
                 ? null
                 : onComplete,
             icon: Icon(
               model.completedToday ? Icons.check_circle_outline : Icons.done,
             ),
-            label: Text(model.completedToday ? 'Done today' : 'Done today'),
+            label: Text(
+              tracker.archivedAt != null
+                  ? 'Archived'
+                  : model.completedToday
+                  ? 'Done today'
+                  : 'Done today',
+            ),
           ),
+          if (tracker.archivedAt == null) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Manage tracker',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            OutlinedButton.icon(
+              onPressed: onArchive,
+              icon: const Icon(Icons.archive_outlined),
+              label: const Text('Archive tracker'),
+            ),
+            Text(
+              'Remove it from Today while keeping its history for later.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           if (model.errorMessage != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(

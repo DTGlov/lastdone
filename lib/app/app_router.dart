@@ -21,6 +21,8 @@ import '../features/trackers/presentation/tracker_detail_screen.dart';
 import '../features/trackers/presentation/tracker_detail_view_model.dart';
 import '../features/trackers/domain/tracker_repository.dart';
 import '../features/trackers/presentation/tracker_editor_sheet.dart';
+import '../features/trackers/presentation/archived_trackers_screen.dart';
+import '../features/subscriptions/presentation/cancelled_subscriptions_screen.dart';
 import '../features/today/presentation/today_view_model.dart';
 import '../features/reminders/domain/reminder_repository.dart';
 import '../features/reminders/presentation/reminders_settings_screen.dart';
@@ -62,6 +64,14 @@ class AppRouter {
            GoRoute(
              path: '/reminders',
              builder: (_, _) => const RemindersSettingsScreen(),
+           ),
+           GoRoute(
+             path: '/archived-trackers',
+             builder: (_, _) => const ArchivedTrackersScreen(),
+           ),
+           GoRoute(
+             path: '/cancelled-subscriptions',
+             builder: (_, _) => const CancelledSubscriptionsScreen(),
            ),
            GoRoute(
              path: '/subscriptions/:id',

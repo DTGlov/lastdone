@@ -20,6 +20,7 @@ import 'app_router.dart';
 import 'app_preferences_controller.dart';
 import 'app_theme.dart';
 import 'startup_branding_overlay.dart';
+import '../core/widgets/app_feedback.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -150,6 +151,8 @@ class _LastDoneAppState extends State<LastDoneApp> {
           darkTheme: buildDarkTheme(),
           themeMode: preferences.themeMode,
           routerConfig: _appRouter.router,
+          debugShowCheckedModeBanner: false,
+          scaffoldMessengerKey: appScaffoldMessengerKey,
           builder: (context, child) =>
               StartupBrandingOverlay(child: child ?? const SizedBox.shrink()),
         ),

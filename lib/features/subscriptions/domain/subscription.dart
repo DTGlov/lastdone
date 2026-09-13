@@ -13,6 +13,7 @@ class Subscription {
     this.catalogServiceId,
     this.logoKey,
     this.note,
+    this.cancelledAt,
   });
 
   final String id;
@@ -26,6 +27,7 @@ class Subscription {
   final DateTime nextChargeDate;
   final bool active;
   final String? note;
+  final DateTime? cancelledAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 }

@@ -156,6 +156,30 @@ class _YouContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          const _SectionLabel('Manage your list'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.archive_outlined),
+                  title: const Text('Archived trackers'),
+                  subtitle: const Text(
+                    'Restore trackers and keep their history',
+                  ),
+                  trailing: const Icon(AppIcons.next),
+                  onTap: () => context.push('/archived-trackers'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.cancel_outlined),
+                  title: const Text('Cancelled subscriptions'),
+                  subtitle: const Text('Restore saved subscription details'),
+                  trailing: const Icon(AppIcons.next),
+                  onTap: () => context.push('/cancelled-subscriptions'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           const _SectionLabel('Reminders'),
           Card(
             child: Column(

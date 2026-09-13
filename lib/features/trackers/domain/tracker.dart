@@ -10,6 +10,7 @@ class Tracker {
     this.iconKey = TrackerIconKeys.checklist,
     this.color = TrackerColor.plum,
     this.firstDueDate,
+    this.archivedAt,
   }) : assert(id != '', 'id is required'),
        assert(title != '', 'title is required');
   final String id, title;
@@ -21,6 +22,7 @@ class Tracker {
 
   /// The first scheduled due date, used only until the first real completion.
   final DateTime? firstDueDate;
+  final DateTime? archivedAt;
   final DateTime createdAt, updatedAt;
 }
 

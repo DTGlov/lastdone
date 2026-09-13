@@ -2,7 +2,7 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseBootstrap {
-  static const version = 5;
+  static const version = 7;
   static Future<Database> open({
     String? databasePath,
     DatabaseFactory? factory,
@@ -17,6 +17,7 @@ class DatabaseBootstrap {
             category_key TEXT NOT NULL DEFAULT 'custom',
             icon_key TEXT NOT NULL DEFAULT 'checklist',
             color_key TEXT NOT NULL DEFAULT 'plum', first_due_date TEXT,
+            archived_at TEXT,
             created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''');
         await db.execute('''CREATE TABLE completions (
             id TEXT PRIMARY KEY, tracker_id TEXT NOT NULL, completed_at TEXT NOT NULL,
@@ -27,12 +28,14 @@ class DatabaseBootstrap {
         await db.execute(
           'CREATE INDEX completions_completed_at ON completions (completed_at)',
         );
-        await db.execute('''CREATE TABLE subscriptions (
+        await db.execute(
+          '''CREATE TABLE subscriptions (
             id TEXT PRIMARY KEY, catalog_service_id TEXT, name TEXT NOT NULL,
             category TEXT NOT NULL, logo_key TEXT, amount_minor INTEGER NOT NULL,
             currency TEXT NOT NULL, frequency TEXT NOT NULL,
             next_charge_date TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1,
-            note TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''');
+            note TEXT, cancelled_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''',
+        );
         await db.execute(
           'CREATE INDEX subscriptions_next_charge ON subscriptions (active, next_charge_date)',
         );
@@ -70,6 +73,14 @@ class DatabaseBootstrap {
         if (oldVersion < 5) {
           await db.execute(
             'ALTER TABLE trackers ADD COLUMN first_due_date TEXT',
+          );
+        }
+        if (oldVersion < 6) {
+          await db.execute('ALTER TABLE trackers ADD COLUMN archived_at TEXT');
+        }
+        if (oldVersion < 7) {
+          await db.execute(
+            'ALTER TABLE subscriptions ADD COLUMN cancelled_at TEXT',
           );
         }
       },
