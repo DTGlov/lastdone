@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../domain/reminder.dart';
@@ -33,19 +33,24 @@ class LocalNotificationGateway implements NotificationGateway {
   final StreamController<NotificationDestination> _destinations =
       StreamController<NotificationDestination>.broadcast();
   bool _initialized = false;
+  Future<void>? _initialization;
 
   @override
   Stream<NotificationDestination> get destinations => _destinations.stream;
 
   @override
-  Future<void> initialize() async {
+  Future<void> initialize() => _initialization ??= _initialize();
+
+  Future<void> _initialize() async {
     if (_initialized) return;
     tz_data.initializeTimeZones();
     try {
       final timezone = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timezone.identifier));
     } catch (_) {
-      tz.setLocalLocation(tz.getLocation('UTC'));
+      // tz.UTC is the package's initialized fallback location. Calling
+      // getLocation('UTC') is unsafe with data variants that omit that alias.
+      tz.setLocalLocation(tz.UTC);
     }
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('ic_stat_lastdone'),

@@ -18,7 +18,7 @@ class TimelineScreen extends StatelessWidget {
       builder: (context, model, _) => NotificationListener<ScrollNotification>(
         onNotification: (notification) {
           if (notification.metrics.extentAfter < 500) {
-            model.loadMore();
+            model.scheduleLoadMore();
           }
           return false;
         },
@@ -39,29 +39,15 @@ class TimelineScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.md),
               _Filters(model: model),
               const SizedBox(height: AppSpacing.md),
-              AnimatedSwitcher(
-                duration: _motionDuration(context),
-                child: switch (model.state) {
-                  TimelineLoadState.loading => const _LoadingState(
-                    key: ValueKey('loading'),
-                  ),
-                  TimelineLoadState.error => _ErrorState(
-                    model: model,
-                    key: const ValueKey('error'),
-                  ),
-                  TimelineLoadState.empty =>
-                    model.hasFilters
-                        ? _NoResultsState(
-                            onClear: model.clearFilters,
-                            key: const ValueKey('no-results'),
-                          )
-                        : const _EmptyState(key: ValueKey('empty')),
-                  TimelineLoadState.content => _TimelineFeed(
-                    model: model,
-                    key: const ValueKey('content'),
-                  ),
-                },
-              ),
+              switch (model.state) {
+                TimelineLoadState.loading => const _LoadingState(),
+                TimelineLoadState.error => _ErrorState(model: model),
+                TimelineLoadState.empty =>
+                  model.hasFilters
+                      ? _NoResultsState(onClear: model.clearFilters)
+                      : const _EmptyState(),
+                TimelineLoadState.content => _TimelineFeed(model: model),
+              },
             ],
           ),
         ),
@@ -69,11 +55,6 @@ class TimelineScreen extends StatelessWidget {
     ),
   );
 }
-
-Duration _motionDuration(BuildContext context) =>
-    MediaQuery.maybeOf(context)?.disableAnimations == true
-    ? Duration.zero
-    : AppMotion.standard;
 
 class _Header extends StatelessWidget {
   const _Header({required this.model});
@@ -167,7 +148,7 @@ class _Filters extends StatelessWidget {
             FilterChip(
               label: const Text('All'),
               selected: model.selectedCategory == null,
-              onSelected: (_) => model.setCategory(null),
+              onSelected: (_) => model.setFilter(TimelineCategoryFilter.all),
             ),
             ...model.availableCategories.map(
               (category) => Padding(
@@ -187,7 +168,7 @@ class _Filters extends StatelessWidget {
 }
 
 class _TimelineFeed extends StatelessWidget {
-  const _TimelineFeed({required this.model, super.key});
+  const _TimelineFeed({required this.model});
   final TimelineViewModel model;
 
   @override
@@ -349,7 +330,7 @@ class _TimelineIcon extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({super.key});
+  const _EmptyState();
   @override
   Widget build(BuildContext context) => Column(
     children: [
@@ -361,7 +342,7 @@ class _EmptyState extends StatelessWidget {
       ),
       const SizedBox(height: AppSpacing.xs),
       const Text(
-        'Complete a tracker and it’ll show up in your Timeline.',
+        'Complete a tracker and it’ll show up here. Current and upcoming trackers are on Today.',
         textAlign: TextAlign.center,
       ),
     ],
@@ -369,7 +350,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _NoResultsState extends StatelessWidget {
-  const _NoResultsState({required this.onClear, super.key});
+  const _NoResultsState({required this.onClear});
   final VoidCallback onClear;
   @override
   Widget build(BuildContext context) => Column(
@@ -387,7 +368,7 @@ class _NoResultsState extends StatelessWidget {
 }
 
 class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.model, super.key});
+  const _ErrorState({required this.model});
   final TimelineViewModel model;
   @override
   Widget build(BuildContext context) => Column(
@@ -400,7 +381,7 @@ class _ErrorState extends StatelessWidget {
 }
 
 class _LoadingState extends StatelessWidget {
-  const _LoadingState({super.key});
+  const _LoadingState();
   @override
   Widget build(BuildContext context) => Column(
     children: List.generate(

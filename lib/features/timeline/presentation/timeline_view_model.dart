@@ -26,12 +26,14 @@ class TimelineViewModel extends ChangeNotifier with WidgetsBindingObserver {
   List<TimelineEntry> entries = const [];
   int monthlyCount = 0;
   String searchQuery = '';
-  TrackerCategory? selectedCategory;
+  TimelineCategoryFilter selectedFilter = TimelineCategoryFilter.all;
   bool hasMore = false;
   bool isLoadingMore = false;
   bool isRefreshing = false;
   String? errorMessage;
   String? paginationError;
+
+  TrackerCategory? get selectedCategory => selectedFilter.category;
 
   late final StreamSubscription<void> _changes;
   Timer? _searchDebounce;
@@ -39,6 +41,7 @@ class TimelineViewModel extends ChangeNotifier with WidgetsBindingObserver {
   int _requestVersion = 0;
   bool _disposed = false;
   bool _refreshQueued = false;
+  bool _loadMoreScheduled = false;
 
   List<TimelineGroup> get groups {
     final grouped = <DateTime, List<TimelineEntry>>{};
@@ -62,7 +65,8 @@ class TimelineViewModel extends ChangeNotifier with WidgetsBindingObserver {
 
   String get monthName => _monthName(currentDate.month);
   bool get hasFilters =>
-      searchQuery.trim().isNotEmpty || selectedCategory != null;
+      searchQuery.trim().isNotEmpty ||
+      selectedFilter != TimelineCategoryFilter.all;
 
   void setSearchQuery(String value) {
     if (searchQuery == value) return;
@@ -74,29 +78,40 @@ class TimelineViewModel extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  void setCategory(TrackerCategory? value) {
-    if (selectedCategory == value) return;
-    selectedCategory = value;
+  void setCategory(TrackerCategory? value) =>
+      setFilter(TimelineCategoryFilter.fromCategory(value));
+
+  void setFilter(TimelineCategoryFilter value) {
+    if (selectedFilter == value) return;
+    selectedFilter = value;
+    paginationError = null;
+    _nextCursor = null;
+    hasMore = false;
     unawaited(refresh());
     notifyListeners();
   }
 
   void clearFilters() {
-    if (searchQuery.isEmpty && selectedCategory == null) return;
+    if (searchQuery.isEmpty && selectedFilter == TimelineCategoryFilter.all) {
+      return;
+    }
     _searchDebounce?.cancel();
     searchQuery = '';
-    selectedCategory = null;
+    selectedFilter = TimelineCategoryFilter.all;
+    paginationError = null;
+    _nextCursor = null;
+    hasMore = false;
     unawaited(refresh());
     notifyListeners();
   }
 
   Future<void> refresh({bool initial = false}) async {
     if (_disposed) return;
+    final version = ++_requestVersion;
     if (isRefreshing) {
       _refreshQueued = true;
       return;
     }
-    final version = ++_requestVersion;
     isRefreshing = true;
     if (initial || entries.isEmpty) state = TimelineLoadState.loading;
     errorMessage = null;
@@ -123,7 +138,7 @@ class TimelineViewModel extends ChangeNotifier with WidgetsBindingObserver {
         errorMessage = 'Your Timeline is waiting for a refresh.';
       }
     } finally {
-      if (!_disposed && version == _requestVersion) {
+      if (!_disposed) {
         isRefreshing = false;
         notifyListeners();
         if (_refreshQueued) {
@@ -166,6 +181,18 @@ class TimelineViewModel extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  void scheduleLoadMore() {
+    if (_disposed || !hasMore || isLoadingMore || _nextCursor == null) return;
+    if (_loadMoreScheduled) return;
+    _loadMoreScheduled = true;
+    final generation = _requestVersion;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadMoreScheduled = false;
+      if (_disposed || generation != _requestVersion) return;
+      unawaited(loadMore());
+    });
+  }
+
   Future<void> retry() => refresh(initial: entries.isEmpty);
 
   @override
@@ -181,6 +208,7 @@ class TimelineViewModel extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     _disposed = true;
+    _loadMoreScheduled = false;
     _searchDebounce?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_changes.cancel());
@@ -193,7 +221,7 @@ class TimelineViewModel extends ChangeNotifier with WidgetsBindingObserver {
       monthStart: start,
       monthEnd: DateTime(currentDate.year, currentDate.month + 1),
       search: searchQuery,
-      category: selectedCategory,
+      category: selectedFilter.category,
       cursor: cursor,
     );
   }

@@ -257,4 +257,45 @@ const subscriptionCatalog = <SubscriptionCatalogEntry>[
     name: 'Peloton',
     category: SubscriptionCategory.fitness,
   ),
+  SubscriptionCatalogEntry(
+    id: 'x-premium',
+    name: 'X Premium',
+    category: SubscriptionCategory.social,
+    aliases: ['twitter'],
+  ),
+  SubscriptionCatalogEntry(
+    id: 'linkedin-premium',
+    name: 'LinkedIn Premium',
+    category: SubscriptionCategory.social,
+  ),
+  SubscriptionCatalogEntry(
+    id: 'snapchat-plus',
+    name: 'Snapchat+',
+    category: SubscriptionCategory.social,
+  ),
+  SubscriptionCatalogEntry(
+    id: 'meta-verified',
+    name: 'Meta Verified',
+    category: SubscriptionCategory.social,
+  ),
+  SubscriptionCatalogEntry(
+    id: 'discord-nitro',
+    name: 'Discord Nitro',
+    category: SubscriptionCategory.social,
+  ),
+  SubscriptionCatalogEntry(
+    id: 'telegram-premium',
+    name: 'Telegram Premium',
+    category: SubscriptionCategory.social,
+  ),
+  SubscriptionCatalogEntry(
+    id: 'reddit-premium',
+    name: 'Reddit Premium',
+    category: SubscriptionCategory.social,
+  ),
+  SubscriptionCatalogEntry(
+    id: 'patreon',
+    name: 'Patreon',
+    category: SubscriptionCategory.social,
+  ),
 ];

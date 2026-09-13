@@ -15,7 +15,7 @@ class _StartupBrandingOverlayState extends State<StartupBrandingOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1100),
+    duration: const Duration(milliseconds: 2300),
   );
   bool _visible = true;
   bool _started = false;
@@ -27,8 +27,8 @@ class _StartupBrandingOverlayState extends State<StartupBrandingOverlay>
     _started = true;
     final reduced = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     _controller.duration = reduced
-        ? const Duration(milliseconds: 260)
-        : const Duration(milliseconds: 1100);
+        ? const Duration(milliseconds: 700)
+        : const Duration(milliseconds: 2300);
     _controller.forward().whenComplete(() {
       if (mounted) setState(() => _visible = false);
     });
@@ -51,18 +51,26 @@ class _StartupBrandingOverlayState extends State<StartupBrandingOverlay>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ScaleTransition(
-                      scale: Tween<double>(begin: .88, end: 1).animate(
+                    RotationTransition(
+                      turns: Tween<double>(begin: -.01, end: .01).animate(
                         CurvedAnimation(
                           parent: _controller,
-                          curve: Curves.elasticOut,
+                          curve: Curves.easeInOut,
                         ),
                       ),
-                      child: const SizedBox(
-                        width: 150,
-                        height: 150,
-                        child: DunMascot(
-                          semanticLabel: 'Dun, the LastDone guide',
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: .88, end: 1).animate(
+                          CurvedAnimation(
+                            parent: _controller,
+                            curve: Curves.elasticOut,
+                          ),
+                        ),
+                        child: const SizedBox(
+                          width: 150,
+                          height: 150,
+                          child: DunMascot(
+                            semanticLabel: 'Dun, the LastDone guide',
+                          ),
                         ),
                       ),
                     ),

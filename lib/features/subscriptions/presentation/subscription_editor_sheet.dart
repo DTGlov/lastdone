@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:simple_icons/simple_icons.dart';
 
 import '../../../core/design_system/design_tokens.dart';
+import '../../../core/design_system/lastdone_dialog.dart';
+import '../../../core/design_system/lastdone_calendar.dart';
 import '../../../core/design_system/app_icons.dart';
 import '../../../core/time/app_clock.dart';
 import '../../../app/app_preferences_controller.dart';
@@ -174,65 +176,57 @@ class _SubscriptionEditorSheetState extends State<SubscriptionEditorSheet> {
 
   Future<void> _save(SubscriptionEditorViewModel model) async {
     if (model.reminderEnabled && model.active) await _offerReminderPermission();
-    if (await model.save() && mounted) context.pop(true);
+    final saved = await model.save();
+    if (!saved && mounted && model.errorMessage != null) {
+      await showLastDoneDialog<void>(
+        context: context,
+        title: 'Subscription not saved',
+        message: model.errorMessage!,
+        variant: LastDoneDialogVariant.error,
+        primaryLabel: 'Keep editing',
+      );
+    }
+    if (saved && mounted) context.pop(true);
   }
 
   Future<void> _offerReminderPermission() async {
-    final gateway = context.read<NotificationGateway>();
-    final status = await gateway.permissionStatus();
-    if (status == NotificationPermissionStatus.authorized || !mounted) return;
-    final allow = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'A gentle reminder?',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              const Text(
-                'LastDone can give you a local heads-up before this subscription renews. Nothing is sent to a server.',
-              ),
-              const SizedBox(height: AppSpacing.md),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Allow reminders'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Not now'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (allow == true) await gateway.requestPermission();
+    try {
+      final gateway = context.read<NotificationGateway>();
+      final status = await gateway.permissionStatus();
+      if (status == NotificationPermissionStatus.authorized || !mounted) return;
+      final allow = await showLastDoneDialog<bool>(
+        context: context,
+        title: 'A gentle reminder?',
+        message: 'LastDone can give you a local heads-up before this subscription renews. Nothing is sent to a server.',
+        primaryLabel: 'Allow reminders',
+        primaryResult: true,
+        secondaryLabel: 'Not now',
+        secondaryResult: false,
+      );
+      if (allow == true) await gateway.requestPermission();
+    } catch (_) {
+      if (mounted) {
+        await showLastDoneDialog<void>(
+          context: context,
+          title: 'Reminder setup is unavailable',
+          message: 'The subscription can still be saved, but its local reminder could not be configured. You can try again later from Reminders.',
+          variant: LastDoneDialogVariant.warning,
+          primaryLabel: 'Continue',
+        );
+      }
+    }
   }
 
   Future<void> _confirmDiscard(SubscriptionEditorViewModel model) async {
-    final leave = await showDialog<bool>(
+    final leave = await showLastDoneDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave without saving?'),
-        content: const Text('Your subscription details are still here.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep editing'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Leave'),
-          ),
-        ],
-      ),
+      title: 'Leave without saving?',
+      message: 'Your subscription details are still here.',
+      variant: LastDoneDialogVariant.confirmation,
+      primaryLabel: 'Leave',
+      primaryResult: true,
+      secondaryLabel: 'Keep editing',
+      secondaryResult: false,
     );
     if (leave == true && mounted) {
       setState(() => _discarding = true);
@@ -462,13 +456,15 @@ class _DateField extends StatelessWidget {
   Future<void> _chooseDate(BuildContext context) async {
     final today = model.clock.now.toLocal();
     final date = DateTime(today.year, today.month, today.day);
-    final chosen = await showDatePicker(
+    final chosen = await showLastDoneCalendar(
       context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      initialDate: model.chargeDate.isBefore(DateTime(2000))
+      firstDay: DateTime(2000),
+      lastDay: DateTime(2100),
+      initialDay: model.chargeDate.isBefore(DateTime(2000))
           ? date
           : model.chargeDate,
+      title: 'Next charge date',
+      supportingText: 'Past dates are allowed; the next occurrence is calculated from your billing frequency.',
     );
     if (chosen != null) model.setChargeDate(chosen);
   }
@@ -564,6 +560,13 @@ IconData? subscriptionBrandIcon(String? catalogServiceId) =>
       'audible' => SimpleIcons.audible,
       'strava' => SimpleIcons.strava,
       'fitbit-premium' => SimpleIcons.fitbit,
+      'x-premium' => SimpleIcons.x,
+      'snapchat-plus' => SimpleIcons.snapchat,
+      'meta-verified' => SimpleIcons.meta,
+      'discord-nitro' => SimpleIcons.discord,
+      'telegram-premium' => SimpleIcons.telegram,
+      'reddit-premium' => SimpleIcons.reddit,
+      'patreon' => SimpleIcons.patreon,
       _ => null,
     };
 
@@ -575,6 +578,7 @@ Color _categoryColor(BuildContext context, SubscriptionCategory category) {
     SubscriptionCategory.sports => colors.dueSoon,
     SubscriptionCategory.ai => colors.informational,
     SubscriptionCategory.gaming => colors.overdue,
+    SubscriptionCategory.social => colors.category,
     _ => Theme.of(context).colorScheme.primaryContainer,
   };
 }

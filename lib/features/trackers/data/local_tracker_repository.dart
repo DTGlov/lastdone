@@ -48,6 +48,7 @@ class LocalTrackerRepository
             category: _categoryFrom(row['category_key'] as String?),
             iconKey: (row['icon_key'] as String?) ?? TrackerIconKeys.checklist,
             color: _colorFrom(row['color_key'] as String?),
+            firstDueDate: _dateOnlyOrNull(row['first_due_date'] as String?),
             createdAt: DateTime.parse(row['created_at']! as String),
             updatedAt: DateTime.parse(row['updated_at']! as String),
           ),
@@ -87,6 +88,7 @@ class LocalTrackerRepository
           'category_key': tracker.category.name,
           'icon_key': tracker.iconKey,
           'color_key': tracker.color.name,
+          'first_due_date': tracker.firstDueDate?.toIso8601String(),
           'created_at': tracker.createdAt.toIso8601String(),
           'updated_at': tracker.updatedAt.toIso8601String(),
         }, conflictAlgorithm: ConflictAlgorithm.ignore);
@@ -583,6 +585,7 @@ class LocalTrackerRepository
     final rows = await database.rawQuery('''
       SELECT t.id, t.title, t.repeat_rule, t.repeat_interval,
              t.category_key, t.icon_key, t.color_key, t.created_at, t.updated_at,
+             t.first_due_date,
              c.id AS completion_id, c.tracker_id AS completion_tracker_id,
              c.completed_at
       FROM trackers t
@@ -621,6 +624,7 @@ class LocalTrackerRepository
     'category_key': tracker.category.name,
     'icon_key': tracker.iconKey,
     'color_key': tracker.color.name,
+    'first_due_date': tracker.firstDueDate?.toIso8601String(),
     'created_at': tracker.createdAt.toIso8601String(),
     'updated_at': tracker.updatedAt.toIso8601String(),
   };
@@ -633,9 +637,18 @@ class LocalTrackerRepository
     category: _categoryFrom(row['category_key'] as String?),
     iconKey: (row['icon_key'] as String?) ?? TrackerIconKeys.checklist,
     color: _colorFrom(row['color_key'] as String?),
+    firstDueDate: _dateOnlyOrNull(row['first_due_date'] as String?),
     createdAt: DateTime.parse(row['created_at']! as String),
     updatedAt: DateTime.parse(row['updated_at']! as String),
   );
+
+  static DateTime? _dateOnlyOrNull(String? value) {
+    if (value == null) return null;
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return null;
+    final local = parsed.toLocal();
+    return DateTime(local.year, local.month, local.day);
+  }
 
   static Subscription _subscriptionFromRow(Map<String, Object?> row) =>
       Subscription(

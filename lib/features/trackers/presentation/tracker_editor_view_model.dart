@@ -60,6 +60,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
     repeatInterval = schedule.$2;
     initialCompletion = InitialCompletionChoice.never;
     selectedDate = null;
+    firstDueDate = tracker?.firstDueDate;
     _initialName = nameController.text;
     _initialInterval = intervalController.text;
     _initialCategory = category;
@@ -67,6 +68,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
     _initialColor = color;
     _initialRepeatUnit = repeatUnit;
     _initialRepeatInterval = repeatInterval;
+    _initialFirstDueDate = firstDueDate;
     nameController.addListener(notifyListeners);
     intervalController.addListener(notifyListeners);
     unawaited(_loadReminder());
@@ -99,6 +101,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
   late int repeatInterval;
   late InitialCompletionChoice initialCompletion;
   DateTime? selectedDate;
+  DateTime? firstDueDate;
   String? nameError;
   String? intervalError;
   String? errorMessage;
@@ -114,6 +117,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
   late final TrackerColor _initialColor;
   late final RepeatUnit _initialRepeatUnit;
   late final int _initialRepeatInterval;
+  late final DateTime? _initialFirstDueDate;
 
   bool get isCreate => mode == TrackerEditorMode.create;
   bool get isDirty =>
@@ -125,7 +129,8 @@ class TrackerEditorViewModel extends ChangeNotifier {
       repeatUnit != _initialRepeatUnit ||
       repeatInterval != _initialRepeatInterval ||
       initialCompletion != InitialCompletionChoice.never ||
-      selectedDate != null;
+      selectedDate != null ||
+      firstDueDate != _initialFirstDueDate;
   String get title => isCreate ? 'Remember something' : 'Edit tracker';
   String get supportingCopy => isCreate
       ? 'What should future you keep track of?'
@@ -152,7 +157,10 @@ class TrackerEditorViewModel extends ChangeNotifier {
 
   void setRepeatUnit(RepeatUnit value) {
     repeatUnit = value;
-    if (value == RepeatUnit.none) intervalController.text = '1';
+    if (value == RepeatUnit.none) {
+      intervalController.text = '1';
+      firstDueDate = null;
+    }
     notifyListeners();
   }
 
@@ -163,6 +171,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
 
   void setInitialCompletion(InitialCompletionChoice value) {
     initialCompletion = value;
+    if (value != InitialCompletionChoice.never) firstDueDate = null;
     if (value == InitialCompletionChoice.today) {
       selectedDate = _dateOnly(clock.now);
     }
@@ -196,6 +205,15 @@ class TrackerEditorViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setFirstDueDate(DateTime? value) {
+    firstDueDate = value == null ? null : _dateOnly(value);
+    if (value != null) {
+      initialCompletion = InitialCompletionChoice.never;
+      selectedDate = null;
+    }
+    notifyListeners();
+  }
+
   Future<bool> save() async {
     if (isSaving) return false;
     if (!_validate()) return false;
@@ -221,6 +239,9 @@ class TrackerEditorViewModel extends ChangeNotifier {
         category: category,
         iconKey: iconKey,
         color: color,
+        firstDueDate: isCreate && repeatUnit != RepeatUnit.none
+            ? firstDueDate
+            : original?.firstDueDate,
         createdAt: original?.createdAt ?? now,
         updatedAt: now,
       );

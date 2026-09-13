@@ -285,7 +285,17 @@ class _CelebrationMessage extends StatelessWidget {
       );
     },
     child: Card(
-      color: Theme.of(context).colorScheme.primaryContainer,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).colorScheme.surfaceContainerHighest
+          : Theme.of(context).colorScheme.primaryContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        side: BorderSide(
+          color: Theme.of(context)
+              .extension<TrackerStatusThemeExtension>()!
+              .completed,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Row(
