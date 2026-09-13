@@ -1,43 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../core/time/app_clock.dart';
+import '../features/onboarding/data/onboarding_status_store.dart';
+import '../features/onboarding/presentation/onboarding_screen.dart';
+import '../features/onboarding/presentation/onboarding_view_model.dart';
 import '../features/profile/presentation/you_screen.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/trackers/presentation/today_screen.dart';
+import '../features/trackers/domain/tracker_repository.dart';
 
 class AppRouter {
-  AppRouter()
-    : router = GoRouter(
-        initialLocation: '/today',
-        routes: [
-          StatefulShellRoute.indexedStack(
-            builder: (_, _, shell) => AppShell(navigationShell: shell),
-            branches: [
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    path: '/today',
-                    builder: (_, _) => const TodayScreen(),
-                  ),
-                ],
-              ),
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(
-                    path: '/timeline',
-                    builder: (_, _) => const TimelineScreen(),
-                  ),
-                ],
-              ),
-              StatefulShellBranch(
-                routes: [
-                  GoRoute(path: '/you', builder: (_, _) => const YouScreen()),
-                ],
-              ),
-            ],
-          ),
-        ],
-      );
+  AppRouter({
+    required bool onboardingComplete,
+    required TrackerRepository trackerRepository,
+    required OnboardingStatusStore statusStore,
+    required AppClock clock,
+  }) : router = GoRouter(
+         initialLocation: onboardingComplete ? '/today' : '/onboarding',
+         routes: [
+           GoRoute(
+             path: '/onboarding',
+             builder: (_, _) => ChangeNotifierProvider(
+               create: (_) => OnboardingViewModel(
+                 trackerRepository: trackerRepository,
+                 statusStore: statusStore,
+                 clock: clock,
+               ),
+               child: const OnboardingScreen(),
+             ),
+           ),
+           StatefulShellRoute.indexedStack(
+             builder: (_, _, shell) => AppShell(navigationShell: shell),
+             branches: [
+               StatefulShellBranch(
+                 routes: [
+                   GoRoute(
+                     path: '/today',
+                     builder: (_, _) => const TodayScreen(),
+                   ),
+                 ],
+               ),
+               StatefulShellBranch(
+                 routes: [
+                   GoRoute(
+                     path: '/timeline',
+                     builder: (_, _) => const TimelineScreen(),
+                   ),
+                 ],
+               ),
+               StatefulShellBranch(
+                 routes: [
+                   GoRoute(path: '/you', builder: (_, _) => const YouScreen()),
+                 ],
+               ),
+             ],
+           ),
+         ],
+       );
   final GoRouter router;
   void dispose() => router.dispose();
 }

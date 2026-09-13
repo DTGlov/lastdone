@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/database/database_bootstrap.dart';
 import '../core/time/app_clock.dart';
 import '../features/trackers/data/local_tracker_repository.dart';
 import '../features/trackers/domain/tracker_repository.dart';
+import '../features/onboarding/data/onboarding_status_store.dart';
 import 'app_router.dart';
 import 'app_theme.dart';
 
@@ -14,10 +16,15 @@ Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (details) => FlutterError.presentError(details);
   final database = await DatabaseBootstrap.open();
+  final preferences = await SharedPreferences.getInstance();
+  final statusStore = SharedPreferencesOnboardingStatusStore(preferences);
+  final onboardingComplete = await statusStore.isComplete();
   runApp(
     LastDoneApp(
       clock: SystemAppClock(),
       trackerRepository: LocalTrackerRepository(database: database),
+      statusStore: statusStore,
+      onboardingComplete: onboardingComplete,
       onDispose: database.close,
     ),
   );
@@ -27,18 +34,27 @@ class LastDoneApp extends StatefulWidget {
   const LastDoneApp({
     required this.clock,
     required this.trackerRepository,
+    required this.statusStore,
+    required this.onboardingComplete,
     required this.onDispose,
     super.key,
   });
   final AppClock clock;
   final TrackerRepository trackerRepository;
+  final OnboardingStatusStore statusStore;
+  final bool onboardingComplete;
   final Future<void> Function() onDispose;
   @override
   State<LastDoneApp> createState() => _LastDoneAppState();
 }
 
 class _LastDoneAppState extends State<LastDoneApp> {
-  late final AppRouter _appRouter = AppRouter();
+  late final AppRouter _appRouter = AppRouter(
+    onboardingComplete: widget.onboardingComplete,
+    trackerRepository: widget.trackerRepository,
+    statusStore: widget.statusStore,
+    clock: widget.clock,
+  );
   @override
   void dispose() {
     unawaited(widget.onDispose());
@@ -51,6 +67,7 @@ class _LastDoneAppState extends State<LastDoneApp> {
     providers: [
       Provider<AppClock>.value(value: widget.clock),
       Provider<TrackerRepository>.value(value: widget.trackerRepository),
+      Provider<OnboardingStatusStore>.value(value: widget.statusStore),
     ],
     child: MaterialApp.router(
       title: 'LastDone',
