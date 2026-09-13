@@ -106,16 +106,3 @@ List<StarterTracker> suggestionsFor(Set<LifeArea> areas) => [
     repeatRule: RepeatRule.weekly,
   ),
 ].where((suggestion) => areas.contains(suggestion.area)).toList();
-
-extension RepeatRuleLabel on RepeatRule {
-  String get label => switch (this) {
-    RepeatRule.daily => 'Every day',
-    RepeatRule.weekly => 'Every week',
-    RepeatRule.everyTwoWeeks => 'Every 2 weeks',
-    RepeatRule.everyThreeWeeks => 'Every 3 weeks',
-    RepeatRule.monthly => 'Every month',
-    RepeatRule.everyThreeMonths => 'Every 3 months',
-    RepeatRule.everyFourMonths => 'Every 4 months',
-    RepeatRule.yearly => 'Every year',
-  };
-}

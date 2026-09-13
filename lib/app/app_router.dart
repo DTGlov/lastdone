@@ -10,6 +10,7 @@ import '../features/profile/presentation/you_screen.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/trackers/presentation/today_screen.dart';
 import '../features/trackers/domain/tracker_repository.dart';
+import '../features/today/presentation/today_view_model.dart';
 
 class AppRouter {
   AppRouter({
@@ -38,7 +39,13 @@ class AppRouter {
                  routes: [
                    GoRoute(
                      path: '/today',
-                     builder: (_, _) => const TodayScreen(),
+                     builder: (_, _) => ChangeNotifierProvider(
+                       create: (_) => TodayViewModel(
+                         repository: trackerRepository,
+                         clock: clock,
+                       ),
+                       child: const TodayScreen(),
+                     ),
                    ),
                  ],
                ),
