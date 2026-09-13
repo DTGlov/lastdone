@@ -71,7 +71,7 @@ class TodayClassifier {
       }
 
       final completedOn = _dateOnly(completion.completedAt);
-      final nextDueDate = _nextDueDate(completedOn, tracker.repeatRule);
+      final nextDueDate = _nextDueDate(completedOn, tracker);
       final status = _statusFor(
         today: today,
         completedOn: completedOn,
@@ -166,18 +166,22 @@ class TodayClassifier {
   static int _titleCompare(TodayTracker a, TodayTracker b) =>
       a.tracker.title.toLowerCase().compareTo(b.tracker.title.toLowerCase());
 
-  static DateTime? _nextDueDate(DateTime completedOn, RepeatRule rule) =>
-      switch (rule) {
-        RepeatRule.unscheduled => null,
-        RepeatRule.daily => completedOn.add(const Duration(days: 1)),
-        RepeatRule.weekly => completedOn.add(const Duration(days: 7)),
-        RepeatRule.everyTwoWeeks => completedOn.add(const Duration(days: 14)),
-        RepeatRule.everyThreeWeeks => completedOn.add(const Duration(days: 21)),
-        RepeatRule.monthly => _addMonths(completedOn, 1),
-        RepeatRule.everyThreeMonths => _addMonths(completedOn, 3),
-        RepeatRule.everyFourMonths => _addMonths(completedOn, 4),
-        RepeatRule.yearly => _addMonths(completedOn, 12),
-      };
+  static DateTime? _nextDueDate(
+    DateTime completedOn,
+    Tracker tracker,
+  ) => switch (tracker.repeatRule) {
+    RepeatRule.unscheduled => null,
+    RepeatRule.daily => completedOn.add(Duration(days: tracker.repeatInterval)),
+    RepeatRule.weekly => completedOn.add(
+      Duration(days: tracker.repeatInterval * 7),
+    ),
+    RepeatRule.everyTwoWeeks => completedOn.add(const Duration(days: 14)),
+    RepeatRule.everyThreeWeeks => completedOn.add(const Duration(days: 21)),
+    RepeatRule.monthly => _addMonths(completedOn, tracker.repeatInterval),
+    RepeatRule.everyThreeMonths => _addMonths(completedOn, 3),
+    RepeatRule.everyFourMonths => _addMonths(completedOn, 4),
+    RepeatRule.yearly => _addMonths(completedOn, tracker.repeatInterval * 12),
+  };
 
   static DateTime _addMonths(DateTime date, int months) {
     final monthIndex = date.month - 1 + months;

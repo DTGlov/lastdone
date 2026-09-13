@@ -10,6 +10,7 @@ import '../features/profile/presentation/you_screen.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/trackers/presentation/today_screen.dart';
 import '../features/trackers/domain/tracker_repository.dart';
+import '../features/trackers/presentation/tracker_editor_sheet.dart';
 import '../features/today/presentation/today_view_model.dart';
 
 class AppRouter {
@@ -76,25 +77,15 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: navigationShell,
-    floatingActionButton: FloatingActionButton(
-      key: const Key('create-action'),
-      tooltip: 'Create',
-      onPressed: () => showModalBottomSheet<void>(
-        context: context,
-        showDragHandle: true,
-        builder: (_) => const SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'Create is coming soon',
-              key: Key('create-placeholder'),
-            ),
-          ),
-        ),
+    floatingActionButton: SafeArea(
+      child: FloatingActionButton(
+        key: const Key('create-action'),
+        tooltip: 'Create tracker',
+        onPressed: () => _createTracker(context),
+        child: const Icon(Icons.add),
       ),
-      child: const Icon(Icons.add),
     ),
-    floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     bottomNavigationBar: NavigationBar(
       selectedIndex: navigationShell.currentIndex,
       onDestinationSelected: (index) => navigationShell.goBranch(
@@ -108,4 +99,17 @@ class AppShell extends StatelessWidget {
       ],
     ),
   );
+}
+
+Future<void> _createTracker(BuildContext context) async {
+  final result = await showTrackerEditor(
+    context: context,
+    repository: context.read<TrackerRepository>(),
+    clock: context.read<AppClock>(),
+  );
+  if (result == true && context.mounted) {
+    context.go('/today');
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Added to your rhythm.')));
+  }
 }
