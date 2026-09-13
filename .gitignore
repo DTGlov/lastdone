@@ -1,0 +1,38 @@
+# macOS and IDE files
+.DS_Store
+.idea/
+
+# FVM-managed SDK links and generated metadata
+.fvm/
+
+# Dart and Flutter tooling output
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# Flutter and platform build output
+build/
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+
+# Local signing files and secrets
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+*.cer
+key.properties
+.env
+.env.*
+!.env.example
+
