@@ -35,8 +35,9 @@ class AppPreferencesController extends ChangeNotifier {
 
   Future<void> saveName(String value) async {
     final trimmed = value.trim();
-    displayNameValue = trimmed.isEmpty ? null : trimmed;
-    await store.saveDisplayName(displayNameValue);
+    final nextName = trimmed.isEmpty ? null : trimmed;
+    await store.saveDisplayName(nextName);
+    displayNameValue = nextName;
     notifyListeners();
   }
 

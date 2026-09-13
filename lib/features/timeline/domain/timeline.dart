@@ -1,5 +1,36 @@
 import '../../trackers/domain/tracker.dart';
 
+enum TimelineCategoryFilter {
+  all,
+  home,
+  vehicle,
+  personalCare,
+  technology,
+  relationships,
+  custom;
+
+  TrackerCategory? get category => switch (this) {
+    TimelineCategoryFilter.all => null,
+    TimelineCategoryFilter.home => TrackerCategory.home,
+    TimelineCategoryFilter.vehicle => TrackerCategory.vehicle,
+    TimelineCategoryFilter.personalCare => TrackerCategory.personalCare,
+    TimelineCategoryFilter.technology => TrackerCategory.technology,
+    TimelineCategoryFilter.relationships => TrackerCategory.relationships,
+    TimelineCategoryFilter.custom => TrackerCategory.custom,
+  };
+
+  static TimelineCategoryFilter fromCategory(TrackerCategory? category) =>
+      switch (category) {
+        null => TimelineCategoryFilter.all,
+        TrackerCategory.home => TimelineCategoryFilter.home,
+        TrackerCategory.vehicle => TimelineCategoryFilter.vehicle,
+        TrackerCategory.personalCare => TimelineCategoryFilter.personalCare,
+        TrackerCategory.technology => TimelineCategoryFilter.technology,
+        TrackerCategory.relationships => TimelineCategoryFilter.relationships,
+        TrackerCategory.custom => TimelineCategoryFilter.custom,
+      };
+}
+
 class TimelineQuery {
   const TimelineQuery({
     required this.monthStart,

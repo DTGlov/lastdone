@@ -1,0 +1,134 @@
+import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
+
+import 'app_icons.dart';
+import 'design_tokens.dart';
+
+Future<DateTime?> showLastDoneCalendar({
+  required BuildContext context,
+  required DateTime firstDay,
+  required DateTime lastDay,
+  required DateTime initialDay,
+  required String title,
+  String? supportingText,
+  bool Function(DateTime day)? enabledDayPredicate,
+}) => showModalBottomSheet<DateTime>(
+  context: context,
+  useSafeArea: true,
+  isScrollControlled: true,
+  showDragHandle: true,
+  builder: (_) => _LastDoneCalendarSheet(
+    firstDay: firstDay,
+    lastDay: lastDay,
+    initialDay: initialDay,
+    title: title,
+    supportingText: supportingText,
+    enabledDayPredicate: enabledDayPredicate,
+  ),
+);
+
+class _LastDoneCalendarSheet extends StatefulWidget {
+  const _LastDoneCalendarSheet({
+    required this.firstDay,
+    required this.lastDay,
+    required this.initialDay,
+    required this.title,
+    this.supportingText,
+    this.enabledDayPredicate,
+  });
+  final DateTime firstDay, lastDay, initialDay;
+  final String title;
+  final String? supportingText;
+  final bool Function(DateTime day)? enabledDayPredicate;
+
+  @override
+  State<_LastDoneCalendarSheet> createState() => _LastDoneCalendarSheetState();
+}
+
+class _LastDoneCalendarSheetState extends State<_LastDoneCalendarSheet> {
+  late DateTime _focusedDay = _dateOnly(widget.initialDay);
+  late DateTime? _selectedDay = _dateOnly(widget.initialDay);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(widget.title, style: theme.textTheme.titleLarge),
+          if (widget.supportingText != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(widget.supportingText!),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          TableCalendar<void>(
+            firstDay: widget.firstDay,
+            lastDay: widget.lastDay,
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) =>
+                _selectedDay != null && isSameDay(_selectedDay, day),
+            enabledDayPredicate: widget.enabledDayPredicate,
+            onDaySelected: (selected, focused) {
+              setState(() {
+                _selectedDay = selected;
+                _focusedDay = focused;
+              });
+            },
+            onPageChanged: (focused) => setState(() => _focusedDay = focused),
+            headerStyle: HeaderStyle(
+              titleTextStyle: theme.textTheme.titleMedium!,
+              formatButtonVisible: false,
+              leftChevronIcon: const Icon(AppIcons.previous),
+              rightChevronIcon: const Icon(AppIcons.next),
+            ),
+            daysOfWeekStyle: DaysOfWeekStyle(
+              weekdayStyle: theme.textTheme.labelSmall!,
+              weekendStyle: theme.textTheme.labelSmall!,
+            ),
+            calendarStyle: CalendarStyle(
+              outsideDaysVisible: false,
+              defaultTextStyle: theme.textTheme.bodyMedium!,
+              weekendTextStyle: theme.textTheme.bodyMedium!,
+              disabledTextStyle: theme.textTheme.bodyMedium!.copyWith(
+                color: scheme.onSurface.withValues(alpha: 0.35),
+              ),
+              todayDecoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: scheme.primary),
+              ),
+              todayTextStyle: theme.textTheme.bodyMedium!,
+              selectedDecoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: scheme.primary,
+              ),
+              selectedTextStyle: theme.textTheme.bodyMedium!.copyWith(
+                color: scheme.onPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton(
+            onPressed: _selectedDay == null
+                ? null
+                : () => Navigator.pop(context, _selectedDay),
+            child: const Text('Use this date'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static DateTime _dateOnly(DateTime value) {
+    final local = value.toLocal();
+    return DateTime(local.year, local.month, local.day);
+  }
+}

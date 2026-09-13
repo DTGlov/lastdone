@@ -154,7 +154,10 @@ class ReminderCoordinator with WidgetsBindingObserver {
 
   DateTime? _trackerDue(String id, List<TrackerOverview> values) {
     final overview = values.where((item) => item.tracker.id == id).firstOrNull;
-    if (overview == null || overview.latestCompletion == null) return null;
+    if (overview == null) return null;
+    if (overview.latestCompletion == null) {
+      return overview.tracker.firstDueDate;
+    }
     return TodayClassifier.nextDueDateFor(
       _dateOnly(overview.latestCompletion!.completedAt),
       overview.tracker,

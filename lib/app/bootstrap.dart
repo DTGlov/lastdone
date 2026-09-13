@@ -89,9 +89,6 @@ class LastDoneApp extends StatefulWidget {
 }
 
 class _LastDoneAppState extends State<LastDoneApp> {
-  late final AppPreferencesController _preferences = AppPreferencesController(
-    widget.profileSettings,
-  );
   StreamSubscription<NotificationDestination>? _notificationSubscription;
   late final AppRouter _appRouter = AppRouter(
     onboardingComplete: widget.onboardingComplete,
@@ -120,15 +117,14 @@ class _LastDoneAppState extends State<LastDoneApp> {
   @override
   void dispose() {
     unawaited(widget.onDispose());
-    _preferences.dispose();
     unawaited(_notificationSubscription?.cancel());
     _appRouter.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => ChangeNotifierProvider.value(
-    value: _preferences,
+  Widget build(BuildContext context) => ChangeNotifierProvider(
+    create: (_) => AppPreferencesController(widget.profileSettings),
     child: Consumer<AppPreferencesController>(
       builder: (context, preferences, _) => MultiProvider(
         providers: [

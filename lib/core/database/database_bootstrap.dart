@@ -2,7 +2,7 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseBootstrap {
-  static const version = 4;
+  static const version = 5;
   static Future<Database> open({
     String? databasePath,
     DatabaseFactory? factory,
@@ -16,7 +16,7 @@ class DatabaseBootstrap {
             repeat_interval INTEGER NOT NULL DEFAULT 1,
             category_key TEXT NOT NULL DEFAULT 'custom',
             icon_key TEXT NOT NULL DEFAULT 'checklist',
-            color_key TEXT NOT NULL DEFAULT 'plum',
+            color_key TEXT NOT NULL DEFAULT 'plum', first_due_date TEXT,
             created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''');
         await db.execute('''CREATE TABLE completions (
             id TEXT PRIMARY KEY, tracker_id TEXT NOT NULL, completed_at TEXT NOT NULL,
@@ -67,6 +67,11 @@ class DatabaseBootstrap {
           );
         }
         if (oldVersion < 4) await _createReminders(db);
+        if (oldVersion < 5) {
+          await db.execute(
+            'ALTER TABLE trackers ADD COLUMN first_due_date TEXT',
+          );
+        }
       },
     ),
   );

@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
+import '../../../core/design_system/lastdone_dialog.dart';
+import '../../../core/design_system/lastdone_calendar.dart';
 import '../../../core/time/app_clock.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
@@ -94,6 +96,11 @@ class _TrackerEditorSheetState extends State<TrackerEditorSheet> {
                   _CompletionField(model: model),
                   const SizedBox(height: AppSpacing.lg),
                   _ScheduleField(model: model),
+                  if (model.isCreate &&
+                      model.repeatUnit != RepeatUnit.none) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _FirstDueDateField(model: model),
+                  ],
                   if (model.reminderRepository != null) ...[
                     const SizedBox(height: AppSpacing.lg),
                     _ReminderField(model: model),
@@ -131,67 +138,57 @@ class _TrackerEditorSheetState extends State<TrackerEditorSheet> {
     if (model.reminderEnabled && model.repeatUnit != RepeatUnit.none) {
       await _offerReminderPermission();
     }
-    if (await model.save() && mounted) context.pop(true);
+    final saved = await model.save();
+    if (!saved && mounted && model.errorMessage != null) {
+      await showLastDoneDialog<void>(
+        context: context,
+        title: 'Tracker not saved',
+        message: model.errorMessage!,
+        variant: LastDoneDialogVariant.error,
+        primaryLabel: 'Keep editing',
+      );
+    }
+    if (saved && mounted) context.pop(true);
   }
 
   Future<void> _offerReminderPermission() async {
-    final gateway = context.read<NotificationGateway>();
-    final status = await gateway.permissionStatus();
-    if (status == NotificationPermissionStatus.authorized || !mounted) return;
-    final allow = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'A gentle reminder?',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              const Text(
-                'LastDone can nudge you locally before this tracker is due. Nothing is sent to a server.',
-              ),
-              const SizedBox(height: AppSpacing.md),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Allow reminders'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Not now'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (allow == true) await gateway.requestPermission();
+    try {
+      final gateway = context.read<NotificationGateway>();
+      final status = await gateway.permissionStatus();
+      if (status == NotificationPermissionStatus.authorized || !mounted) return;
+      final allow = await showLastDoneDialog<bool>(
+        context: context,
+        title: 'A gentle reminder?',
+        message: 'LastDone can nudge you locally before this tracker is due. Nothing is sent to a server.',
+        primaryLabel: 'Allow reminders',
+        primaryResult: true,
+        secondaryLabel: 'Not now',
+        secondaryResult: false,
+      );
+      if (allow == true) await gateway.requestPermission();
+    } catch (_) {
+      if (mounted) {
+        await showLastDoneDialog<void>(
+          context: context,
+          title: 'Reminder setup is unavailable',
+          message: 'The tracker can still be saved, but its local reminder could not be configured. You can try again later from Reminders.',
+          variant: LastDoneDialogVariant.warning,
+          primaryLabel: 'Continue',
+        );
+      }
+    }
   }
 
   Future<void> _confirmDiscard(TrackerEditorViewModel model) async {
-    final discard = await showDialog<bool>(
+    final discard = await showLastDoneDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave without saving?'),
-        content: const Text(
-          'Your changes are still fresh. Would you like to keep editing?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep editing'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Leave'),
-          ),
-        ],
-      ),
+      title: 'Leave without saving?',
+      message: 'Your changes are still fresh. Would you like to keep editing?',
+      variant: LastDoneDialogVariant.confirmation,
+      primaryLabel: 'Leave',
+      primaryResult: true,
+      secondaryLabel: 'Keep editing',
+      secondaryResult: false,
     );
     if (discard == true && mounted) {
       setState(() => _discarding = true);
@@ -420,11 +417,15 @@ class _CompletionField extends StatelessWidget {
     final model = this.model;
     final today = model.clock.now.toLocal();
     final todayDate = DateTime(today.year, today.month, today.day);
-    final chosen = await showDatePicker(
+    final chosen = await showLastDoneCalendar(
       context: context,
-      firstDate: DateTime(2000),
-      lastDate: todayDate,
-      initialDate: model.selectedDate ?? todayDate,
+      firstDay: DateTime(2000),
+      lastDay: todayDate,
+      initialDay: model.selectedDate ?? todayDate,
+      title: 'Last completed',
+      supportingText:
+          'Choose a past date or today. This remains factual history.',
+      enabledDayPredicate: (day) => !day.isAfter(todayDate),
     );
     if (chosen != null) model.setDate(chosen);
   }
@@ -477,6 +478,55 @@ class _ScheduleField extends StatelessWidget {
       Text(model.cadencePreview, style: Theme.of(context).textTheme.bodySmall),
     ],
   );
+}
+
+class _FirstDueDateField extends StatelessWidget {
+  const _FirstDueDateField({required this.model});
+  final TrackerEditorViewModel model;
+
+  @override
+  Widget build(BuildContext context) => InputDecorator(
+    decoration: const InputDecoration(
+      labelText: 'First due date (optional)',
+      helperText: 'For a tracker you have not completed yet.',
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            model.firstDueDate == null
+                ? 'Starts when you are ready'
+                : _dateLabel(model.firstDueDate!),
+          ),
+        ),
+        TextButton(
+          onPressed: () => _chooseDate(context),
+          child: Text(model.firstDueDate == null ? 'Choose' : 'Change'),
+        ),
+        if (model.firstDueDate != null)
+          IconButton(
+            tooltip: 'Clear first due date',
+            onPressed: () => model.setFirstDueDate(null),
+            icon: const Icon(Icons.clear),
+          ),
+      ],
+    ),
+  );
+
+  Future<void> _chooseDate(BuildContext context) async {
+    final today = model.clock.now.toLocal();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final chosen = await showLastDoneCalendar(
+      context: context,
+      firstDay: todayDate,
+      lastDay: DateTime(todayDate.year + 20),
+      initialDay: model.firstDueDate ?? todayDate,
+      title: 'First due date',
+      supportingText:
+          'This schedules the first occurrence without creating a completion.',
+    );
+    if (chosen != null) model.setFirstDueDate(chosen);
+  }
 }
 
 class _ReminderField extends StatelessWidget {

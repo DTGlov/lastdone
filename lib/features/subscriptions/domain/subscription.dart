@@ -39,6 +39,7 @@ enum SubscriptionCategory {
   cloudAndProductivity,
   newsAndReading,
   fitness,
+  social,
   custom,
 }
 
@@ -54,6 +55,7 @@ extension SubscriptionCategoryLabel on SubscriptionCategory {
     SubscriptionCategory.cloudAndProductivity => 'Cloud & productivity',
     SubscriptionCategory.newsAndReading => 'News & reading',
     SubscriptionCategory.fitness => 'Fitness',
+    SubscriptionCategory.social => 'Social',
     SubscriptionCategory.custom => 'Custom',
   };
 }

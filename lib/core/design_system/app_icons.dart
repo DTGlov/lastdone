@@ -13,6 +13,7 @@ class AppIcons {
   static const add = LucideIcons.plus;
   static const edit = LucideIcons.pencil;
   static const next = LucideIcons.chevronRight;
+  static const previous = LucideIcons.chevronLeft;
   static const complete = LucideIcons.circleCheck;
   static const check = LucideIcons.check;
   static const search = LucideIcons.search;

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_preferences_controller.dart';
 import '../../../core/design_system/app_icons.dart';
 import '../../../core/design_system/design_tokens.dart';
+import '../../../core/design_system/lastdone_dialog.dart';
 import '../../../core/widgets/dun_view.dart';
 import '../../reminders/data/notification_gateway.dart';
 import '../../reminders/domain/reminder.dart';
@@ -37,186 +38,190 @@ class _YouContent extends StatelessWidget {
     final preferences = context.watch<AppPreferencesController>();
     final model = context.watch<ProfileViewModel>();
     final stats = model.statistics;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        120,
-      ),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'You',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    preferences.displayNameValue == null
-                        ? 'Your calm corner in LastDone.'
-                        : 'A little space for ${preferences.displayNameValue}.',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(
-              width: 84,
-              height: 70,
-              child: DunMascot(decorative: true),
-            ),
-          ],
+    return SafeArea(
+      top: true,
+      bottom: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          120,
         ),
-        const SizedBox(height: AppSpacing.lg),
-        const _SectionLabel('Identity'),
-        Card(
-          child: ListTile(
-            leading: const Icon(AppIcons.profile),
-            title: Text(preferences.displayNameValue ?? 'Add your name'),
-            subtitle: const Text('Used locally for a warmer greeting'),
-            trailing: const Icon(AppIcons.edit),
-            onTap: () => _editName(context, preferences),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        const _SectionLabel('Your activity'),
-        if (stats == null)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: LinearProgressIndicator(),
-            ),
-          )
-        else
-          _StatsCard(stats: stats),
-        const SizedBox(height: AppSpacing.lg),
-        const _SectionLabel('Preferences'),
-        Card(
-          child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ListTile(
-                leading: const Icon(Icons.brightness_6_outlined),
-                title: const Text('Theme'),
-                trailing: DropdownButton<AppThemePreference>(
-                  value: preferences.theme,
-                  underline: const SizedBox.shrink(),
-                  items: AppThemePreference.values
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(_themeLabel(value)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) preferences.saveTheme(value);
-                  },
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'You',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      preferences.displayNameValue == null
+                          ? 'Your calm corner in LastDone.'
+                          : 'A little space for ${preferences.displayNameValue}.',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ],
                 ),
               ),
-              ListTile(
-                leading: const Icon(AppIcons.subscriptions),
-                title: const Text('Default subscription currency'),
-                trailing: DropdownButton<String>(
-                  value: preferences.currency,
-                  underline: const SizedBox.shrink(),
-                  items:
-                      const [
-                            'GHS',
-                            'USD',
-                            'GBP',
-                            'EUR',
-                            'CAD',
-                            'NGN',
-                            'ZAR',
-                            'KES',
-                          ]
-                          .map(
-                            (value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(value),
-                            ),
-                          )
-                          .toList(),
-                  onChanged: (value) {
-                    if (value != null) preferences.saveCurrency(value);
-                  },
-                ),
+              const SizedBox(
+                width: 84,
+                height: 70,
+                child: DunMascot(decorative: true),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        const _SectionLabel('Reminders'),
-        Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.notifications_none),
-                title: const Text('Reminder settings'),
-                subtitle: Text(
-                  '${model.trackerReminders} tracker · ${model.subscriptionReminders} subscription reminders',
-                ),
-                trailing: const Icon(AppIcons.next),
-                onTap: () => context.push('/reminders'),
+          const SizedBox(height: AppSpacing.lg),
+          const _SectionLabel('Identity'),
+          Card(
+            child: ListTile(
+              leading: const Icon(AppIcons.profile),
+              title: Text(preferences.displayNameValue ?? 'Add your name'),
+              subtitle: const Text('Used locally for a warmer greeting'),
+              trailing: const Icon(AppIcons.edit),
+              onTap: () => _editName(context, preferences),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const _SectionLabel('Your activity'),
+          if (stats == null)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: LinearProgressIndicator(),
               ),
-              if (model.permission == NotificationPermissionStatus.denied)
+            )
+          else
+            _StatsCard(stats: stats),
+          const SizedBox(height: AppSpacing.lg),
+          const _SectionLabel('Preferences'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.brightness_6_outlined),
+                  title: const Text('Theme'),
+                  trailing: DropdownButton<AppThemePreference>(
+                    value: preferences.theme,
+                    underline: const SizedBox.shrink(),
+                    items: AppThemePreference.values
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(_themeLabel(value)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) preferences.saveTheme(value);
+                    },
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(AppIcons.subscriptions),
+                  title: const Text('Default subscription currency'),
+                  trailing: DropdownButton<String>(
+                    value: preferences.currency,
+                    underline: const SizedBox.shrink(),
+                    items:
+                        const [
+                              'GHS',
+                              'USD',
+                              'GBP',
+                              'EUR',
+                              'CAD',
+                              'NGN',
+                              'ZAR',
+                              'KES',
+                            ]
+                            .map(
+                              (value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(value),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (value) {
+                      if (value != null) preferences.saveCurrency(value);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const _SectionLabel('Reminders'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.notifications_none),
+                  title: const Text('Reminder settings'),
+                  subtitle: Text(
+                    '${model.trackerReminders} tracker · ${model.subscriptionReminders} subscription reminders',
+                  ),
+                  trailing: const Icon(AppIcons.next),
+                  onTap: () => context.push('/reminders'),
+                ),
+                if (model.permission == NotificationPermissionStatus.denied)
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: const Text('Permission needed'),
+                    onTap: model.openNotificationSettings,
+                  ),
+                if (model.permission == NotificationPermissionStatus.authorized)
+                  ListTile(
+                    leading: const Icon(Icons.notifications_active_outlined),
+                    title: const Text('Send test notification'),
+                    onTap: model.sendTestNotification,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          const _SectionLabel('About and privacy'),
+          Card(
+            child: Column(
+              children: [
+                const ListTile(
+                  leading: Icon(Icons.lock_outline),
+                  title: Text('Local-first privacy'),
+                  subtitle: Text(
+                    'Your trackers, subscriptions, and settings stay on this device.',
+                  ),
+                ),
                 ListTile(
                   leading: const Icon(Icons.info_outline),
-                  title: const Text('Permission needed'),
-                  onTap: model.openNotificationSettings,
+                  title: const Text('About LastDone'),
+                  subtitle: const Text('Warm tools for everyday rhythms.'),
+                  onTap: () => _about(context),
                 ),
-              if (model.permission == NotificationPermissionStatus.authorized)
                 ListTile(
-                  leading: const Icon(Icons.notifications_active_outlined),
-                  title: const Text('Send test notification'),
-                  onTap: model.sendTestNotification,
+                  leading: const Icon(Icons.menu_book_outlined),
+                  title: const Text('Open-source licenses'),
+                  onTap: () => showLicensePage(
+                    context: context,
+                    applicationName: 'LastDone',
+                  ),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        const _SectionLabel('About and privacy'),
-        Card(
-          child: Column(
-            children: [
-              const ListTile(
-                leading: Icon(Icons.lock_outline),
-                title: Text('Local-first privacy'),
-                subtitle: Text(
-                  'Your trackers, subscriptions, and settings stay on this device.',
-                ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.info_outline),
-                title: const Text('About LastDone'),
-                subtitle: const Text('Warm tools for everyday rhythms.'),
-                onTap: () => _about(context),
-              ),
-              ListTile(
-                leading: const Icon(Icons.menu_book_outlined),
-                title: const Text('Open-source licenses'),
-                onTap: () => showLicensePage(
-                  context: context,
-                  applicationName: 'LastDone',
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (model.errorMessage != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            model.errorMessage!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
+          if (model.errorMessage != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              model.errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -224,45 +229,12 @@ class _YouContent extends StatelessWidget {
     BuildContext context,
     AppPreferencesController preferences,
   ) async {
-    final controller = TextEditingController(
-      text: preferences.displayNameValue ?? '',
-    );
-    final value = await showModalBottomSheet<String>(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.sm,
-          AppSpacing.lg,
-          MediaQuery.viewInsetsOf(context).bottom + AppSpacing.lg,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'What should Dun call you?',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: controller,
-              maxLength: 40,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Display name'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text),
-              child: const Text('Save name'),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => _NameEditorSheet(preferences: preferences),
     );
-    controller.dispose();
-    if (value != null) await preferences.saveName(value);
   }
 
   static Future<void> _about(BuildContext context) async {
@@ -281,6 +253,97 @@ class _YouContent extends StatelessWidget {
     AppThemePreference.light => 'Light',
     AppThemePreference.dark => 'Dark',
   };
+}
+
+class _NameEditorSheet extends StatefulWidget {
+  const _NameEditorSheet({required this.preferences});
+  final AppPreferencesController preferences;
+
+  @override
+  State<_NameEditorSheet> createState() => _NameEditorSheetState();
+}
+
+class _NameEditorSheetState extends State<_NameEditorSheet> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.preferences.displayNameValue ?? '',
+  );
+  bool _saving = false;
+  String? _error;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      AppSpacing.lg,
+      AppSpacing.sm,
+      AppSpacing.lg,
+      MediaQuery.viewInsetsOf(context).bottom + AppSpacing.lg,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'What should Dun call you?',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextField(
+          controller: _controller,
+          maxLength: 40,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'Display name',
+            errorText: _error,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox.square(
+                  dimension: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save name'),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _save() async {
+    final value = _controller.text.trim();
+    if (value.length > 40) {
+      setState(() => _error = 'Keep your name to 40 characters or fewer.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.preferences.saveName(value);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = 'We could not save your name yet. Please try again.';
+      });
+      await showLastDoneDialog<void>(
+        context: context,
+        title: 'Name not saved',
+        message: 'Your name is still here. Please try saving it again.',
+        variant: LastDoneDialogVariant.error,
+        primaryLabel: 'Keep editing',
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 }
 
 class _StatsCard extends StatelessWidget {

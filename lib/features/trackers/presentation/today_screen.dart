@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -13,8 +15,17 @@ import '../domain/tracker_repository.dart';
 import '../../reminders/domain/reminder_repository.dart';
 import 'tracker_editor_sheet.dart';
 
-class TodayScreen extends StatelessWidget {
+class TodayScreen extends StatefulWidget {
   const TodayScreen({super.key});
+
+  @override
+  State<TodayScreen> createState() => _TodayScreenState();
+}
+
+class _TodayScreenState extends State<TodayScreen> {
+  Timer? _undoExpiry;
+  String? _activeUndoCompletionId;
+  ScaffoldFeatureController<SnackBar, SnackBarClosedReason>? _undoSnackBar;
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -50,6 +61,7 @@ class TodayScreen extends StatelessWidget {
                 ),
                 TodayLoadState.content => _ContentState(
                   model: model,
+                  onOpen: (id) => _openTracker(context, id),
                   key: const ValueKey('content'),
                 ),
               },
@@ -59,6 +71,75 @@ class TodayScreen extends StatelessWidget {
       ),
     ),
   );
+
+  Future<void> _openTracker(BuildContext context, String trackerId) async {
+    final completion = await context.push<Completion>('/trackers/$trackerId');
+    if (completion == null || !mounted || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    _undoExpiry?.cancel();
+    _undoSnackBar?.close();
+    _activeUndoCompletionId = completion.id;
+    messenger.hideCurrentSnackBar();
+    _undoSnackBar = messenger.showSnackBar(
+      SnackBar(
+        content: const Text('Freshly handled.'),
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () => _undoCompletion(context, completion),
+        ),
+      ),
+    );
+    _undoExpiry = Timer(const Duration(seconds: 5), () {
+      if (!mounted ||
+          !context.mounted ||
+          _activeUndoCompletionId != completion.id) {
+        return;
+      }
+      _activeUndoCompletionId = null;
+      _undoSnackBar?.close();
+      _undoSnackBar = null;
+    });
+  }
+
+  Future<void> _undoCompletion(
+    BuildContext context,
+    Completion completion,
+  ) async {
+    _undoExpiry?.cancel();
+    _undoExpiry = null;
+    _undoSnackBar?.close();
+    _undoSnackBar = null;
+    if (_activeUndoCompletionId == completion.id) {
+      _activeUndoCompletionId = null;
+    }
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    final repository = context.read<TrackerRepository>();
+    if (repository
+        case final TrackerCompletionRepository completionRepository) {
+      try {
+        await completionRepository.deleteCompletion(completion.id);
+        if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Back to where you left it.')),
+          );
+        }
+      } catch (_) {
+        if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('We could not undo that just yet.')),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _undoExpiry?.cancel();
+    _undoSnackBar?.close();
+    super.dispose();
+  }
 }
 
 Duration _motionDuration(BuildContext context) =>
@@ -141,8 +222,9 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _ContentState extends StatelessWidget {
-  const _ContentState({required this.model, super.key});
+  const _ContentState({required this.model, required this.onOpen, super.key});
   final TodayViewModel model;
+  final ValueChanged<String> onOpen;
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,7 +235,11 @@ class _ContentState extends StatelessWidget {
           contextText: 'To look after',
         ),
         ...model.sections.needsAttention.map(
-          (item) => _TrackerCard(key: ValueKey(item.tracker.id), item: item),
+          (item) => _TrackerCard(
+            key: ValueKey(item.tracker.id),
+            item: item,
+            onOpen: onOpen,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
       ],
@@ -163,7 +249,11 @@ class _ContentState extends StatelessWidget {
           contextText: 'Next 7 days and beyond',
         ),
         ...model.sections.comingUp.map(
-          (item) => _TrackerCard(key: ValueKey(item.tracker.id), item: item),
+          (item) => _TrackerCard(
+            key: ValueKey(item.tracker.id),
+            item: item,
+            onOpen: onOpen,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
       ],
@@ -173,7 +263,11 @@ class _ContentState extends StatelessWidget {
           contextText: 'Handled lately',
         ),
         ...model.sections.recentlyDone.map(
-          (item) => _TrackerCard(key: ValueKey(item.tracker.id), item: item),
+          (item) => _TrackerCard(
+            key: ValueKey(item.tracker.id),
+            item: item,
+            onOpen: onOpen,
+          ),
         ),
       ],
     ],
@@ -198,8 +292,9 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _TrackerCard extends StatelessWidget {
-  const _TrackerCard({required this.item, super.key});
+  const _TrackerCard({required this.item, required this.onOpen, super.key});
   final TodayTracker item;
+  final ValueChanged<String> onOpen;
   @override
   Widget build(BuildContext context) {
     final status = _statusCopy(
@@ -214,7 +309,7 @@ class _TrackerCard extends StatelessWidget {
       child: Card(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: InkWell(
-          onTap: () => _openTracker(context, item.tracker.id),
+          onTap: () => onOpen(item.tracker.id),
           borderRadius: BorderRadius.circular(AppRadii.card),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -256,47 +351,6 @@ class _TrackerCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-Future<void> _openTracker(BuildContext context, String trackerId) async {
-  final completion = await context.push<Completion>('/trackers/$trackerId');
-  if (completion == null || !context.mounted) return;
-  final messenger = ScaffoldMessenger.of(context);
-  messenger.hideCurrentSnackBar();
-  messenger.showSnackBar(
-    SnackBar(
-      content: const Text('Freshly handled.'),
-      duration: const Duration(seconds: 5),
-      action: SnackBarAction(
-        label: 'Undo',
-        onPressed: () => _undoCompletion(context, completion),
-      ),
-    ),
-  );
-}
-
-Future<void> _undoCompletion(
-  BuildContext context,
-  Completion completion,
-) async {
-  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-  final repository = context.read<TrackerRepository>();
-  if (repository case final TrackerCompletionRepository completionRepository) {
-    try {
-      await completionRepository.deleteCompletion(completion.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Back to where you left it.')),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('We could not undo that just yet.')),
-        );
-      }
-    }
   }
 }
 

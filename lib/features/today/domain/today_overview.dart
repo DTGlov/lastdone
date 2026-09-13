@@ -56,11 +56,16 @@ class TodayClassifier {
       final tracker = overview.tracker;
       final completion = overview.latestCompletion;
       if (completion == null) {
+        final firstDueDate = tracker.firstDueDate;
+        final initialStatus = tracker.repeatRule == RepeatRule.unscheduled
+            ? TodayStatus.unscheduled
+            : firstDueDate == null
+            ? TodayStatus.notStarted
+            : _statusForInitialDueDate(today, firstDueDate);
         final item = TodayTracker(
           overview: overview,
-          status: tracker.repeatRule == RepeatRule.unscheduled
-              ? TodayStatus.unscheduled
-              : TodayStatus.notStarted,
+          status: initialStatus,
+          nextDueDate: firstDueDate,
         );
         if (item.status == TodayStatus.notStarted) {
           attention.add(item);
@@ -108,6 +113,19 @@ class TodayClassifier {
       comingUp: List.unmodifiable(comingUp),
       recentlyDone: List.unmodifiable(recentlyDone),
     );
+  }
+
+  static TodayStatus _statusForInitialDueDate(
+    DateTime today,
+    DateTime dueDate,
+  ) {
+    final due = _dateOnly(dueDate);
+    if (due.isBefore(today)) return TodayStatus.overdue;
+    if (_sameDate(due, today)) return TodayStatus.dueToday;
+    if (!due.isAfter(today.add(const Duration(days: 7)))) {
+      return TodayStatus.dueSoon;
+    }
+    return TodayStatus.upcoming;
   }
 
   static TodayStatus _statusFor({
