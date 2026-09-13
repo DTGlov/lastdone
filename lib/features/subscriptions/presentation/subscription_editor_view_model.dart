@@ -15,9 +15,11 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
   SubscriptionEditorViewModel.create({
     required this.repository,
     required this.clock,
+    String? defaultCurrency,
     this.reminderRepository,
   }) : mode = SubscriptionEditorMode.create,
        original = null {
+    _defaultCurrency = defaultCurrency;
     _initialise();
   }
 
@@ -36,6 +38,7 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
   final SubscriptionEditorMode mode;
   final Subscription? original;
   final ReminderRepository? reminderRepository;
+  String? _defaultCurrency;
   late final TextEditingController nameController;
   late final TextEditingController amountController;
   late SubscriptionCategory category;
@@ -84,7 +87,7 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
     selectedService = subscription == null
         ? null
         : catalogForId(subscription.catalogServiceId);
-    currency = subscription?.currency ?? 'GHS';
+    currency = subscription?.currency ?? _defaultCurrency ?? 'GHS';
     frequency = subscription?.frequency ?? BillingFrequency.monthly;
     chargeDate = _dateOnly(subscription?.nextChargeDate ?? now);
     active = subscription?.active ?? true;

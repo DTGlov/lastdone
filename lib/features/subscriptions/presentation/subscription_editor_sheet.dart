@@ -6,6 +6,7 @@ import 'package:simple_icons/simple_icons.dart';
 import '../../../core/design_system/design_tokens.dart';
 import '../../../core/design_system/app_icons.dart';
 import '../../../core/time/app_clock.dart';
+import '../../../app/app_preferences_controller.dart';
 import '../domain/subscription.dart';
 import '../domain/subscription_catalog.dart';
 import '../domain/subscription_repository.dart';
@@ -25,12 +26,16 @@ Future<bool?> showSubscriptionEditor({
   isScrollControlled: true,
   useSafeArea: true,
   showDragHandle: true,
-  builder: (_) => ChangeNotifierProvider(
+  builder: (sheetContext) => ChangeNotifierProvider(
     create: (_) => subscription == null
         ? SubscriptionEditorViewModel.create(
             repository: repository,
             clock: clock,
             reminderRepository: reminderRepository,
+            defaultCurrency: Provider.of<AppPreferencesController>(
+              sheetContext,
+              listen: false,
+            ).currency,
           )
         : SubscriptionEditorViewModel.edit(
             repository: repository,

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:sqflite/sqflite.dart';
 
+import '../../../core/time/app_clock.dart';
 import '../../subscriptions/domain/subscription.dart';
 import '../../subscriptions/domain/subscription_repository.dart';
 import '../domain/tracker.dart';
@@ -10,15 +11,18 @@ import '../../timeline/domain/timeline.dart';
 import '../../timeline/domain/timeline_repository.dart';
 import '../../reminders/domain/reminder.dart';
 import '../../reminders/domain/reminder_repository.dart';
+import '../../profile/domain/profile_settings.dart';
 
 class LocalTrackerRepository
     implements
         TrackerCompletionRepository,
         SubscriptionRepository,
         TimelineRepository,
-        ReminderRepository {
-  LocalTrackerRepository({required this.database});
+        ReminderRepository,
+        ProfileStatisticsRepository {
+  LocalTrackerRepository({required this.database, this.clock});
   final Database database;
+  final AppClock? clock;
   final StreamController<List<TrackerOverview>> _overviewChanges =
       StreamController<List<TrackerOverview>>.broadcast(sync: true);
   final StreamController<String> _detailChanges =
@@ -29,6 +33,8 @@ class LocalTrackerRepository
       StreamController<void>.broadcast(sync: true);
   final StreamController<List<ReminderPreference>> _reminderChanges =
       StreamController<List<ReminderPreference>>.broadcast(sync: true);
+  final StreamController<ProfileStatistics> _profileChanges =
+      StreamController<ProfileStatistics>.broadcast(sync: true);
   @override
   Future<List<Tracker>> listTrackers() async {
     final rows = await database.query('trackers', orderBy: 'created_at ASC');
@@ -66,6 +72,7 @@ class LocalTrackerRepository
     await _subscriptionChanges.close();
     await _timelineChanges.close();
     await _reminderChanges.close();
+    await _profileChanges.close();
   }
 
   @override
@@ -90,6 +97,7 @@ class LocalTrackerRepository
       _detailChanges.add(tracker.id);
     }
     _timelineChanges.add(null);
+    _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
   }
 
   @override
@@ -110,6 +118,7 @@ class LocalTrackerRepository
     await refreshOverview();
     _detailChanges.add(tracker.id);
     _timelineChanges.add(null);
+    _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
   }
 
   @override
@@ -123,6 +132,7 @@ class LocalTrackerRepository
     await refreshOverview();
     _detailChanges.add(tracker.id);
     _timelineChanges.add(null);
+    _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
   }
 
   @override
@@ -182,6 +192,7 @@ class LocalTrackerRepository
       await refreshOverview();
       _detailChanges.add(trackerId);
       _timelineChanges.add(null);
+      _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
     }
     return inserted;
   }
@@ -209,6 +220,7 @@ class LocalTrackerRepository
       await refreshOverview();
       _detailChanges.add(trackerId!);
       _timelineChanges.add(null);
+      _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
     }
   }
 
@@ -221,6 +233,7 @@ class LocalTrackerRepository
   @override
   Future<void> refreshSubscriptions() async {
     _subscriptionChanges.add(await _querySubscriptions());
+    _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
   }
 
   @override
@@ -232,6 +245,63 @@ class LocalTrackerRepository
       ),
     );
     _subscriptionChanges.add(await _querySubscriptions());
+    _profileChanges.add(await getStatistics(clock?.now ?? DateTime.now()));
+  }
+
+  @override
+  Future<ProfileStatistics> getStatistics(DateTime now) async {
+    final local = now.toLocal();
+    final monthStart = DateTime(local.year, local.month);
+    final monthEnd = DateTime(local.year, local.month + 1);
+    final activeTrackers = await database.rawQuery(
+      'SELECT COUNT(*) FROM trackers',
+    );
+    final monthCompletions = await database.rawQuery(
+      'SELECT COUNT(*) FROM completions WHERE completed_at >= ? AND completed_at < ?',
+      [monthStart.toIso8601String(), monthEnd.toIso8601String()],
+    );
+    final totalCompletions = await database.rawQuery(
+      'SELECT COUNT(*) FROM completions',
+    );
+    final activeSubscriptions = await database.rawQuery(
+      'SELECT COUNT(*) FROM subscriptions WHERE active = 1',
+    );
+    final subscriptionRows = await database.query(
+      'subscriptions',
+      columns: ['amount_minor', 'currency', 'frequency'],
+      where: 'active = 1',
+    );
+    final totals = <String, int>{};
+    for (final row in subscriptionRows) {
+      final subscription = _subscriptionFromRow({
+        ...row,
+        'id': 'stats',
+        'name': 'stats',
+        'category': SubscriptionCategory.custom.name,
+        'next_charge_date': monthStart.toIso8601String(),
+        'active': 1,
+        'created_at': monthStart.toIso8601String(),
+        'updated_at': monthStart.toIso8601String(),
+      });
+      totals.update(
+        subscription.currency,
+        (value) => value + monthlyEstimateMinor(subscription),
+        ifAbsent: () => monthlyEstimateMinor(subscription),
+      );
+    }
+    return ProfileStatistics(
+      activeTrackerCount: Sqflite.firstIntValue(activeTrackers) ?? 0,
+      monthCompletionCount: Sqflite.firstIntValue(monthCompletions) ?? 0,
+      totalCompletionCount: Sqflite.firstIntValue(totalCompletions) ?? 0,
+      activeSubscriptionCount: Sqflite.firstIntValue(activeSubscriptions) ?? 0,
+      monthlySubscriptionTotals: Map.unmodifiable(totals),
+    );
+  }
+
+  @override
+  Stream<ProfileStatistics> watchStatistics(DateTime now) async* {
+    yield await getStatistics(now);
+    yield* _profileChanges.stream;
   }
 
   @override

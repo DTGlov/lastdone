@@ -41,6 +41,7 @@ dependencies:
   flutter_local_notifications: ^22.3.1
   timezone: ^0.11.1
   flutter_timezone: ^5.1.0
+  package_info_plus: ^10.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -54,7 +55,25 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/lastdone_app_icon.png
+  adaptive_icon_background: '#2F6B4F'
+  adaptive_icon_foreground: assets/branding/lastdone_adaptive_foreground.png
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: '#F7F4EC'
+  color_dark: '#0F1512'
+  image: assets/branding/lastdone_adaptive_foreground.png
+  android_12:
+    image: assets/branding/lastdone_adaptive_foreground.png
+    color: '#F7F4EC'
+    color_dark: '#0F1512'
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -62,6 +81,8 @@ dev_dependencies:
 flutter:
 
   assets:
+    - assets/branding/lastdone_app_icon.png
+    - assets/branding/lastdone_adaptive_foreground.png
     - assets/images/dun/dun_idle.png
     - assets/images/dun/dun_subscriptions.png
     - assets/images/dun/dun_celebrating.png

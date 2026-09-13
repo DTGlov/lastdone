@@ -10,12 +10,16 @@ import '../features/trackers/data/local_tracker_repository.dart';
 import '../features/trackers/domain/tracker_repository.dart';
 import '../features/subscriptions/domain/subscription_repository.dart';
 import '../features/onboarding/data/onboarding_status_store.dart';
+import '../features/profile/data/profile_settings_store.dart';
+import '../features/profile/domain/profile_settings.dart';
 import '../features/reminders/application/reminder_coordinator.dart';
 import '../features/reminders/data/notification_gateway.dart';
 import '../features/reminders/domain/reminder_repository.dart';
 import '../features/reminders/domain/reminder.dart';
 import 'app_router.dart';
+import 'app_preferences_controller.dart';
 import 'app_theme.dart';
+import 'startup_branding_overlay.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,24 +27,30 @@ Future<void> bootstrap() async {
   final database = await DatabaseBootstrap.open();
   final preferences = await SharedPreferences.getInstance();
   final statusStore = SharedPreferencesOnboardingStatusStore(preferences);
+  final profileSettings = SharedPreferencesProfileSettingsStore(preferences);
   final onboardingComplete = await statusStore.isComplete();
-  final trackerRepository = LocalTrackerRepository(database: database);
+  final appClock = SystemAppClock();
+  final trackerRepository = LocalTrackerRepository(
+    database: database,
+    clock: appClock,
+  );
   final notificationGateway = LocalNotificationGateway();
   final reminderCoordinator = ReminderCoordinator(
     reminders: trackerRepository,
     trackerRepository: trackerRepository,
     subscriptionRepository: trackerRepository,
     gateway: notificationGateway,
-    clock: SystemAppClock(),
+    clock: appClock,
   );
   unawaited(reminderCoordinator.start());
   runApp(
     LastDoneApp(
-      clock: SystemAppClock(),
+      clock: appClock,
       trackerRepository: trackerRepository,
       subscriptionRepository: trackerRepository,
       reminderRepository: trackerRepository,
       notificationGateway: notificationGateway,
+      profileSettings: profileSettings,
       statusStore: statusStore,
       onboardingComplete: onboardingComplete,
       onDispose: () async {
@@ -60,6 +70,7 @@ class LastDoneApp extends StatefulWidget {
     required this.statusStore,
     required this.reminderRepository,
     required this.notificationGateway,
+    required this.profileSettings,
     required this.onboardingComplete,
     required this.onDispose,
     super.key,
@@ -70,6 +81,7 @@ class LastDoneApp extends StatefulWidget {
   final OnboardingStatusStore statusStore;
   final ReminderRepository reminderRepository;
   final NotificationGateway notificationGateway;
+  final ProfileSettingsStore profileSettings;
   final bool onboardingComplete;
   final Future<void> Function() onDispose;
   @override
@@ -77,6 +89,9 @@ class LastDoneApp extends StatefulWidget {
 }
 
 class _LastDoneAppState extends State<LastDoneApp> {
+  late final AppPreferencesController _preferences = AppPreferencesController(
+    widget.profileSettings,
+  );
   StreamSubscription<NotificationDestination>? _notificationSubscription;
   late final AppRouter _appRouter = AppRouter(
     onboardingComplete: widget.onboardingComplete,
@@ -105,29 +120,44 @@ class _LastDoneAppState extends State<LastDoneApp> {
   @override
   void dispose() {
     unawaited(widget.onDispose());
+    _preferences.dispose();
     unawaited(_notificationSubscription?.cancel());
     _appRouter.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => MultiProvider(
-    providers: [
-      Provider<AppClock>.value(value: widget.clock),
-      Provider<TrackerRepository>.value(value: widget.trackerRepository),
-      Provider<SubscriptionRepository>.value(
-        value: widget.subscriptionRepository,
+  Widget build(BuildContext context) => ChangeNotifierProvider.value(
+    value: _preferences,
+    child: Consumer<AppPreferencesController>(
+      builder: (context, preferences, _) => MultiProvider(
+        providers: [
+          Provider<AppClock>.value(value: widget.clock),
+          Provider<TrackerRepository>.value(value: widget.trackerRepository),
+          Provider<SubscriptionRepository>.value(
+            value: widget.subscriptionRepository,
+          ),
+          Provider<OnboardingStatusStore>.value(value: widget.statusStore),
+          Provider<ReminderRepository>.value(value: widget.reminderRepository),
+          Provider<NotificationGateway>.value(
+            value: widget.notificationGateway,
+          ),
+          Provider<ProfileStatisticsRepository?>.value(
+            value: widget.trackerRepository is ProfileStatisticsRepository
+                ? widget.trackerRepository as ProfileStatisticsRepository
+                : null,
+          ),
+        ],
+        child: MaterialApp.router(
+          title: 'LastDone',
+          theme: buildLightTheme(),
+          darkTheme: buildDarkTheme(),
+          themeMode: preferences.themeMode,
+          routerConfig: _appRouter.router,
+          builder: (context, child) =>
+              StartupBrandingOverlay(child: child ?? const SizedBox.shrink()),
+        ),
       ),
-      Provider<OnboardingStatusStore>.value(value: widget.statusStore),
-      Provider<ReminderRepository>.value(value: widget.reminderRepository),
-      Provider<NotificationGateway>.value(value: widget.notificationGateway),
-    ],
-    child: MaterialApp.router(
-      title: 'LastDone',
-      theme: buildLightTheme(),
-      darkTheme: buildDarkTheme(),
-      themeMode: ThemeMode.system,
-      routerConfig: _appRouter.router,
     ),
   );
 }
