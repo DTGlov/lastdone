@@ -1,6 +1,7 @@
 # macOS and IDE files
 .DS_Store
 .idea/
+*.iml
 
 # FVM-managed SDK links and generated metadata
 .fvm/
@@ -35,4 +36,3 @@ key.properties
 .env
 .env.*
 !.env.example
-
