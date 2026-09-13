@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -26,7 +24,7 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _celebrationController = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 720),
+    duration: const Duration(milliseconds: 900),
   );
   bool _celebrating = false;
 
@@ -35,7 +33,7 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
     final model = context.watch<TrackerDetailViewModel>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tracker details'),
+        title: const Text('Details'),
         actions: [
           if (model.details != null)
             IconButton(
@@ -62,6 +60,7 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
             TrackerDetailLoadState.content => _DetailContent(
               model: model,
               celebrating: _celebrating,
+              celebrationAnimation: _celebrationController,
               onComplete: () => _complete(model),
               key: const ValueKey('content'),
             ),
@@ -113,11 +112,13 @@ class _DetailContent extends StatelessWidget {
   const _DetailContent({
     required this.model,
     required this.celebrating,
+    required this.celebrationAnimation,
     required this.onComplete,
     super.key,
   });
   final TrackerDetailViewModel model;
   final bool celebrating;
+  final Animation<double> celebrationAnimation;
   final VoidCallback onComplete;
 
   @override
@@ -140,7 +141,10 @@ class _DetailContent extends StatelessWidget {
           AnimatedSwitcher(
             duration: _detailMotion(context),
             child: celebrating
-                ? const _CelebrationMessage(key: ValueKey('celebration'))
+                ? _CelebrationMessage(
+                    animation: celebrationAnimation,
+                    key: const ValueKey('celebration'),
+                  )
                 : _StatusPanel(
                     item: item,
                     currentDate: model.currentDate,
@@ -149,33 +153,22 @@ class _DetailContent extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              FilledButton.icon(
-                onPressed:
-                    model.isCompleting || model.completedToday || celebrating
-                    ? null
-                    : onComplete,
-                icon: Icon(
-                  model.completedToday
-                      ? Icons.check_circle_outline
-                      : Icons.done,
-                ),
-                label: Text(model.completedToday ? 'Done today' : 'Done today'),
-              ),
-              if (celebrating)
-                IgnorePointer(
-                  child: SizedBox(
-                    height: 96,
-                    child: _CelebrationBurst(
-                      animation: context
-                          .findAncestorStateOfType<_TrackerDetailScreenState>()!
-                          ._celebrationController,
-                    ),
-                  ),
-                ),
-            ],
+          FilledButton.icon(
+            style: model.completedToday
+                ? FilledButton.styleFrom(
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                  )
+                : null,
+            onPressed: model.isCompleting || model.completedToday || celebrating
+                ? null
+                : onComplete,
+            icon: Icon(
+              model.completedToday ? Icons.check_circle_outline : Icons.done,
+            ),
+            label: Text(model.completedToday ? 'Done today' : 'Done today'),
           ),
           if (model.errorMessage != null) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -224,7 +217,7 @@ class _TrackerHero extends StatelessWidget {
           children: [
             Text(
               tracker.title,
-              style: Theme.of(context).textTheme.displaySmall,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
@@ -277,57 +270,35 @@ class _StatusPanel extends StatelessWidget {
 }
 
 class _CelebrationMessage extends StatelessWidget {
-  const _CelebrationMessage({super.key});
-  @override
-  Widget build(BuildContext context) => Card(
-    color: Theme.of(context).colorScheme.primaryContainer,
-    child: const Padding(
-      padding: EdgeInsets.all(AppSpacing.lg),
-      child: Row(
-        children: [
-          DunView(state: DunState.celebrating),
-          Expanded(child: Text('Freshly handled.')),
-        ],
-      ),
-    ),
-  );
-}
-
-class _CelebrationBurst extends StatelessWidget {
-  const _CelebrationBurst({required this.animation});
+  const _CelebrationMessage({required this.animation, super.key});
   final Animation<double> animation;
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: animation,
-    builder: (_, _) => CustomPaint(
-      painter: _BurstPainter(
-        animation.value,
-        Theme.of(context).colorScheme.primary,
+    builder: (context, child) {
+      final progress = Curves.easeOutBack.transform(animation.value);
+      return Transform.translate(
+        offset: Offset(0, 18 * (1 - progress)),
+        child: Transform.scale(scale: 0.88 + (0.12 * progress), child: child),
+      );
+    },
+    child: Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 76,
+              height: 64,
+              child: DunMascot(state: DunMascotState.celebrating),
+            ),
+            Expanded(child: Text('Freshly handled.')),
+          ],
+        ),
       ),
     ),
   );
-}
-
-class _BurstPainter extends CustomPainter {
-  const _BurstPainter(this.progress, this.color);
-  final double progress;
-  final Color color;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final paint = Paint()..color = color;
-    for (var index = 0; index < 8; index++) {
-      final angle = index * math.pi / 4;
-      final distance = 12 + progress * 42;
-      final point =
-          center + Offset(math.cos(angle), math.sin(angle)) * distance;
-      canvas.drawCircle(point, 3 * (1 - progress), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _BurstPainter oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.color != color;
 }
 
 class _EmptyHistory extends StatelessWidget {
@@ -464,7 +435,7 @@ IconData _iconFor(String key) => switch (key) {
 Color _trackerColor(BuildContext context, TrackerColor color) {
   final colors = Theme.of(context).extension<TrackerStatusThemeExtension>()!;
   return switch (color) {
-    TrackerColor.lime => const Color(0xFFC8F55B),
+    TrackerColor.lime => Theme.of(context).colorScheme.primaryContainer,
     TrackerColor.plum => colors.category,
     TrackerColor.sky => colors.informational,
     TrackerColor.coral => colors.overdue,

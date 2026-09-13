@@ -30,10 +30,14 @@ class SubscriptionsScreen extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Subs',
-                    style: Theme.of(context).textTheme.displaySmall,
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),
-                const DunView(),
+                const SizedBox(
+                  width: 96,
+                  height: 78,
+                  child: DunMascot(state: DunMascotState.subscriptions),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -79,9 +83,15 @@ class _Content extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer
+                .withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -100,7 +110,7 @@ class _Content extends StatelessWidget {
                         .map(
                           (entry) => Text(
                             formatMinorAmount(entry.value, entry.key),
-                            style: Theme.of(context).textTheme.headlineSmall,
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
                         )
                         .toList(),
@@ -182,28 +192,38 @@ class _SubscriptionTile extends StatelessWidget {
   final DateTime date, currentDate;
   final bool inactive;
   @override
-  Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-    child: ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+    child: Material(
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.control),
+        side: BorderSide(color: Theme.of(context).dividerColor),
       ),
-      leading: SubscriptionLogo(
-        name: subscription.name,
-        category: subscription.category,
-        logoKey: subscription.logoKey,
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        tileColor: Colors.transparent,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 2,
+        ),
+        leading: SubscriptionLogo(
+          name: subscription.name,
+          category: subscription.category,
+          catalogServiceId: subscription.catalogServiceId,
+          logoKey: subscription.logoKey,
+        ),
+        title: Text(subscription.name),
+        subtitle: Text(
+          '${formatMinorAmount(subscription.amountMinor, subscription.currency)} · ${subscription.frequency.label}\n${inactive ? 'Inactive' : _chargeLanguage(date, currentDate)}',
+        ),
+        isThreeLine: false,
+        trailing: const Icon(
+          Icons.chevron_right,
+          semanticLabel: 'Edit subscription',
+        ),
+        onTap: () => _edit(context),
       ),
-      title: Text(subscription.name),
-      subtitle: Text(
-        '${formatMinorAmount(subscription.amountMinor, subscription.currency)} · ${subscription.frequency.label}\n${inactive ? 'Inactive' : _chargeLanguage(date, currentDate)}',
-      ),
-      isThreeLine: true,
-      trailing: const Icon(
-        Icons.chevron_right,
-        semanticLabel: 'Edit subscription',
-      ),
-      onTap: () => _edit(context),
     ),
   );
 
@@ -229,7 +249,11 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         children: [
-          const DunView(),
+          const SizedBox(
+            width: 120,
+            height: 96,
+            child: DunMascot(state: DunMascotState.subscriptions),
+          ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             'Nothing recurring yet.',

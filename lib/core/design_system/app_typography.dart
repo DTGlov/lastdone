@@ -12,24 +12,37 @@ class AppTypography {
   static TextTheme textTheme(Color ink, Color muted) => TextTheme(
     displaySmall: TextStyle(
       fontFamily: headingFamily,
-      fontSize: 36,
+      fontSize: 34,
       fontWeight: FontWeight.w700,
       color: ink,
     ),
     headlineSmall: TextStyle(
       fontFamily: headingFamily,
-      fontSize: 26,
+      fontSize: 28,
       fontWeight: FontWeight.w700,
+      color: ink,
+    ),
+    titleLarge: TextStyle(
+      fontFamily: headingFamily,
+      fontSize: 22,
+      fontWeight: FontWeight.w600,
       color: ink,
     ),
     titleMedium: TextStyle(
       fontFamily: headingFamily,
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: FontWeight.w600,
       color: ink,
     ),
     bodyLarge: TextStyle(fontFamily: bodyFamily, fontSize: 16, color: ink),
     bodyMedium: TextStyle(fontFamily: bodyFamily, fontSize: 14, color: muted),
-    labelLarge: label.copyWith(color: ink),
+    bodySmall: TextStyle(fontFamily: bodyFamily, fontSize: 13, color: muted),
+    labelLarge: TextStyle(
+      fontFamily: bodyFamily,
+      fontSize: 15,
+      fontWeight: FontWeight.w700,
+      color: ink,
+    ),
+    labelMedium: label.copyWith(color: muted),
   );
 }

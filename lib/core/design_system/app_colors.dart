@@ -9,28 +9,30 @@ class AppColors {
     required this.mutedInk,
     required this.divider,
   });
-  static const brandPrimary = Color(0xFFC8F55B);
-  static const onPrimary = Color(0xFF1E241F);
-  static const overdueCoral = Color(0xFFFF8066);
-  static const dueSoonGold = Color(0xFFFFD75A);
-  static const completedMint = Color(0xFFA8E585);
-  static const categoryPlum = Color(0xFFB8A0EF);
-  static const informationalSky = Color(0xFF8ECFF2);
+  static const brandPrimary = Color(0xFF2F6B4F);
+  static const onPrimary = Color(0xFFF4F7F2);
+  static const primarySoft = Color(0xFFA9D9BE);
+  static const celebrationApricot = Color(0xFFE9A66A);
+  static const overdueCoral = Color(0xFFB85C4B);
+  static const dueSoonGold = Color(0xFFB78335);
+  static const completedMint = Color(0xFFA9D9BE);
+  static const categoryPlum = Color(0xFF8D7AB8);
+  static const informationalSky = Color(0xFF6C9CB5);
   final Color canvas, surface, elevatedSurface, primaryInk, mutedInk, divider;
   static const light = AppColors._(
-    canvas: Color(0xFFF8F4E8),
-    surface: Color(0xFFFFFDF7),
-    elevatedSurface: Colors.white,
-    primaryInk: Color(0xFF1E241F),
-    mutedInk: Color(0xFF687069),
-    divider: Color(0xFFE7E1D4),
+    canvas: Color(0xFFF7F4EC),
+    surface: Color(0xFFFFFEFA),
+    elevatedSurface: Color(0xFFFFFFFF),
+    primaryInk: Color(0xFF17231D),
+    mutedInk: Color(0xFF5F7166),
+    divider: Color(0xFFD7E2DA),
   );
   static const dark = AppColors._(
-    canvas: Color(0xFF161A17),
-    surface: Color(0xFF222722),
-    elevatedSurface: Color(0xFF2C322C),
-    primaryInk: Color(0xFFF7F4EB),
-    mutedInk: Color(0xFFB6BDB7),
-    divider: Color(0xFF343A34),
+    canvas: Color(0xFF0F1512),
+    surface: Color(0xFF171E1A),
+    elevatedSurface: Color(0xFF1D2721),
+    primaryInk: Color(0xFFF4F7F2),
+    mutedInk: Color(0xFFA9B5AD),
+    divider: Color(0xFF314137),
   );
 }
