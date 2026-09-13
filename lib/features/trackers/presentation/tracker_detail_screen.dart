@@ -84,8 +84,7 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
       return;
     }
     setState(() => _celebrating = true);
-    _celebrationController.forward(from: 0);
-    await Future<void>.delayed(const Duration(milliseconds: 720));
+    await _celebrationController.forward(from: 0);
     if (mounted) context.pop(completion);
   }
 

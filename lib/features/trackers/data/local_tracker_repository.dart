@@ -2,16 +2,21 @@ import 'dart:async';
 
 import 'package:sqflite/sqflite.dart';
 
+import '../../subscriptions/domain/subscription.dart';
+import '../../subscriptions/domain/subscription_repository.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
 
-class LocalTrackerRepository implements TrackerCompletionRepository {
+class LocalTrackerRepository
+    implements TrackerCompletionRepository, SubscriptionRepository {
   LocalTrackerRepository({required this.database});
   final Database database;
   final StreamController<List<TrackerOverview>> _overviewChanges =
       StreamController<List<TrackerOverview>>.broadcast(sync: true);
   final StreamController<String> _detailChanges =
       StreamController<String>.broadcast(sync: true);
+  final StreamController<List<Subscription>> _subscriptionChanges =
+      StreamController<List<Subscription>>.broadcast(sync: true);
   @override
   Future<List<Tracker>> listTrackers() async {
     final rows = await database.query('trackers', orderBy: 'created_at ASC');
@@ -46,6 +51,7 @@ class LocalTrackerRepository implements TrackerCompletionRepository {
   Future<void> dispose() async {
     await _overviewChanges.close();
     await _detailChanges.close();
+    await _subscriptionChanges.close();
   }
 
   @override
@@ -187,6 +193,49 @@ class LocalTrackerRepository implements TrackerCompletionRepository {
     }
   }
 
+  @override
+  Stream<List<Subscription>> watchSubscriptions() async* {
+    yield await _querySubscriptions();
+    yield* _subscriptionChanges.stream;
+  }
+
+  @override
+  Future<void> refreshSubscriptions() async {
+    _subscriptionChanges.add(await _querySubscriptions());
+  }
+
+  @override
+  Future<void> createSubscription(Subscription subscription) async {
+    await database.transaction(
+      (transaction) => transaction.insert(
+        'subscriptions',
+        _subscriptionValues(subscription),
+      ),
+    );
+    _subscriptionChanges.add(await _querySubscriptions());
+  }
+
+  @override
+  Future<void> updateSubscription(Subscription subscription) async {
+    await database.transaction(
+      (transaction) => transaction.update(
+        'subscriptions',
+        _subscriptionValues(subscription),
+        where: 'id = ?',
+        whereArgs: [subscription.id],
+      ),
+    );
+    _subscriptionChanges.add(await _querySubscriptions());
+  }
+
+  Future<List<Subscription>> _querySubscriptions() async {
+    final rows = await database.query(
+      'subscriptions',
+      orderBy: 'active DESC, next_charge_date ASC, name COLLATE NOCASE ASC',
+    );
+    return List.unmodifiable(rows.map(_subscriptionFromRow));
+  }
+
   Future<TrackerDetails?> _queryDetails(String trackerId) async {
     final trackerRows = await database.query(
       'trackers',
@@ -275,6 +324,41 @@ class LocalTrackerRepository implements TrackerCompletionRepository {
     createdAt: DateTime.parse(row['created_at']! as String),
     updatedAt: DateTime.parse(row['updated_at']! as String),
   );
+
+  static Subscription _subscriptionFromRow(Map<String, Object?> row) =>
+      Subscription(
+        id: row['id']! as String,
+        catalogServiceId: row['catalog_service_id'] as String?,
+        name: row['name']! as String,
+        category: SubscriptionCategory.values.byName(
+          row['category']! as String,
+        ),
+        logoKey: row['logo_key'] as String?,
+        amountMinor: row['amount_minor']! as int,
+        currency: row['currency']! as String,
+        frequency: BillingFrequency.values.byName(row['frequency']! as String),
+        nextChargeDate: DateTime.parse(row['next_charge_date']! as String),
+        active: (row['active']! as int) == 1,
+        note: row['note'] as String?,
+        createdAt: DateTime.parse(row['created_at']! as String),
+        updatedAt: DateTime.parse(row['updated_at']! as String),
+      );
+
+  static Map<String, Object?> _subscriptionValues(Subscription value) => {
+    'id': value.id,
+    'catalog_service_id': value.catalogServiceId,
+    'name': value.name,
+    'category': value.category.name,
+    'logo_key': value.logoKey,
+    'amount_minor': value.amountMinor,
+    'currency': value.currency,
+    'frequency': value.frequency.name,
+    'next_charge_date': value.nextChargeDate.toIso8601String(),
+    'active': value.active ? 1 : 0,
+    'note': value.note,
+    'created_at': value.createdAt.toIso8601String(),
+    'updated_at': value.updatedAt.toIso8601String(),
+  };
 
   static TrackerCategory _categoryFrom(String? value) =>
       TrackerCategory.values.any((item) => item.name == value)
