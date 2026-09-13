@@ -100,6 +100,9 @@ class OnboardingViewModel extends ChangeNotifier {
               id: starter.id,
               title: starter.effectiveTitle,
               repeatRule: starter.effectiveRepeatRule,
+              category: _trackerCategory(starter.area),
+              iconKey: _trackerIcon(starter.area),
+              color: _trackerColor(starter.area),
               createdAt: now,
               updatedAt: now,
             ),
@@ -117,6 +120,33 @@ class OnboardingViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  static TrackerCategory _trackerCategory(LifeArea area) => switch (area) {
+    LifeArea.home => TrackerCategory.home,
+    LifeArea.vehicle => TrackerCategory.vehicle,
+    LifeArea.personalCare => TrackerCategory.personalCare,
+    LifeArea.technology => TrackerCategory.technology,
+    LifeArea.relationships => TrackerCategory.relationships,
+    LifeArea.custom => TrackerCategory.custom,
+  };
+
+  static String _trackerIcon(LifeArea area) => switch (area) {
+    LifeArea.home => TrackerIconKeys.home,
+    LifeArea.vehicle => TrackerIconKeys.vehicle,
+    LifeArea.personalCare => TrackerIconKeys.personalCare,
+    LifeArea.technology => TrackerIconKeys.technology,
+    LifeArea.relationships => TrackerIconKeys.relationships,
+    LifeArea.custom => TrackerIconKeys.checklist,
+  };
+
+  static TrackerColor _trackerColor(LifeArea area) => switch (area) {
+    LifeArea.home => TrackerColor.plum,
+    LifeArea.vehicle => TrackerColor.gold,
+    LifeArea.personalCare => TrackerColor.mint,
+    LifeArea.technology => TrackerColor.sky,
+    LifeArea.relationships => TrackerColor.coral,
+    LifeArea.custom => TrackerColor.plum,
+  };
 
   void back() {
     if (step == OnboardingStep.welcome || isSubmitting) return;

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
+import '../../../core/time/app_clock.dart';
 import '../../../core/widgets/dun_view.dart';
 import '../../today/domain/today_overview.dart';
 import '../../today/presentation/today_view_model.dart';
 import '../domain/tracker.dart';
+import '../domain/tracker_repository.dart';
+import 'tracker_editor_sheet.dart';
 
 class TodayScreen extends StatelessWidget {
   const TodayScreen({super.key});
@@ -17,7 +20,12 @@ class TodayScreen extends StatelessWidget {
         onRefresh: model.retry,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            96,
+          ),
           children: [
             _TodayHeader(model: model),
             const SizedBox(height: AppSpacing.lg),
@@ -177,7 +185,6 @@ class _TrackerCard extends StatelessWidget {
   final TodayTracker item;
   @override
   Widget build(BuildContext context) {
-    final category = _categoryFor(item.tracker);
     final status = _statusCopy(
       item,
       context.read<TodayViewModel>().currentDate,
@@ -186,20 +193,18 @@ class _TrackerCard extends StatelessWidget {
       button: true,
       container: true,
       label:
-          '${item.tracker.title}. ${status.title}. ${item.tracker.repeatRule.label}',
+          '${item.tracker.title}. ${status.title}. ${item.tracker.repeatRule.labelFor(item.tracker.repeatInterval)}',
       child: Card(
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: InkWell(
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Details are coming next.')),
-          ),
+          onTap: () => _editTracker(context, item.overview),
           borderRadius: BorderRadius.circular(AppRadii.card),
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _CategoryIcon(category: category),
+                _CategoryIcon(tracker: item.tracker),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
@@ -211,7 +216,9 @@ class _TrackerCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        item.tracker.repeatRule.label,
+                        item.tracker.repeatRule.labelFor(
+                          item.tracker.repeatInterval,
+                        ),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: AppSpacing.xs),
@@ -243,32 +250,48 @@ class _TrackerCard extends StatelessWidget {
   }
 }
 
+Future<void> _editTracker(
+  BuildContext context,
+  TrackerOverview overview,
+) async {
+  final result = await showTrackerEditor(
+    context: context,
+    repository: context.read<TrackerRepository>(),
+    clock: context.read<AppClock>(),
+    overview: overview,
+  );
+  if (result == true && context.mounted) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Tracker updated.')));
+  }
+}
+
 class _CategoryIcon extends StatelessWidget {
-  const _CategoryIcon({required this.category});
-  final _TrackerCategory category;
+  const _CategoryIcon({required this.tracker});
+  final Tracker tracker;
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<TrackerStatusThemeExtension>()!;
-    final color = switch (category) {
-      _TrackerCategory.home => colors.category,
-      _TrackerCategory.vehicle => colors.dueSoon,
-      _TrackerCategory.personalCare => colors.completed,
-      _TrackerCategory.technology => colors.informational,
-      _TrackerCategory.relationships => colors.overdue,
-      _TrackerCategory.general => Theme.of(
-        context,
-      ).colorScheme.onSurface.withValues(alpha: 0.55),
+    final color = switch (tracker.color) {
+      TrackerColor.lime => const Color(0xFFC8F55B),
+      TrackerColor.plum => colors.category,
+      TrackerColor.sky => colors.informational,
+      TrackerColor.coral => colors.overdue,
+      TrackerColor.gold => colors.dueSoon,
+      TrackerColor.mint => colors.completed,
     };
-    final icon = switch (category) {
-      _TrackerCategory.home => Icons.home_outlined,
-      _TrackerCategory.vehicle => Icons.directions_car_outlined,
-      _TrackerCategory.personalCare => Icons.spa_outlined,
-      _TrackerCategory.technology => Icons.devices_outlined,
-      _TrackerCategory.relationships => Icons.people_outline,
-      _TrackerCategory.general => Icons.checklist_outlined,
+    final icon = switch (tracker.iconKey) {
+      TrackerIconKeys.home => Icons.home_outlined,
+      TrackerIconKeys.vehicle => Icons.directions_car_outlined,
+      TrackerIconKeys.personalCare => Icons.spa_outlined,
+      TrackerIconKeys.technology => Icons.devices_outlined,
+      TrackerIconKeys.relationships => Icons.people_outline,
+      TrackerIconKeys.tools => Icons.build_outlined,
+      TrackerIconKeys.leaf => Icons.eco_outlined,
+      _ => Icons.checklist_outlined,
     };
     return Semantics(
-      label: category.label,
+      label: '${tracker.category.label} category, ${tracker.title} icon',
       child: CircleAvatar(
         backgroundColor: color,
         child: Icon(icon, color: Theme.of(context).colorScheme.onSurface),
@@ -340,7 +363,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           FilledButton(
-            onPressed: () => _showCreatePlaceholder(context),
+            onPressed: () => _createTrackerFromEmpty(context),
             child: const Text('Add a tracker'),
           ),
         ],
@@ -420,43 +443,14 @@ String _doneCopy(DateTime date, DateTime currentDate) {
   return 'Done $days days ago';
 }
 
-enum _TrackerCategory {
-  home,
-  vehicle,
-  personalCare,
-  technology,
-  relationships,
-  general,
+Future<void> _createTrackerFromEmpty(BuildContext context) async {
+  final result = await showTrackerEditor(
+    context: context,
+    repository: context.read<TrackerRepository>(),
+    clock: context.read<AppClock>(),
+  );
+  if (result == true && context.mounted) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Added to your rhythm.')));
+  }
 }
-
-extension on _TrackerCategory {
-  String get label => switch (this) {
-    _TrackerCategory.home => 'Home category',
-    _TrackerCategory.vehicle => 'Vehicle category',
-    _TrackerCategory.personalCare => 'Personal care category',
-    _TrackerCategory.technology => 'Technology category',
-    _TrackerCategory.relationships => 'Relationships category',
-    _TrackerCategory.general => 'General category',
-  };
-}
-
-_TrackerCategory _categoryFor(Tracker tracker) {
-  final id = tracker.id.toLowerCase();
-  if (id.startsWith('home-')) return _TrackerCategory.home;
-  if (id.startsWith('vehicle-')) return _TrackerCategory.vehicle;
-  if (id.startsWith('personal-care-')) return _TrackerCategory.personalCare;
-  if (id.startsWith('technology-')) return _TrackerCategory.technology;
-  if (id.startsWith('relationships-')) return _TrackerCategory.relationships;
-  return _TrackerCategory.general;
-}
-
-void _showCreatePlaceholder(BuildContext context) => showModalBottomSheet<void>(
-  context: context,
-  showDragHandle: true,
-  builder: (_) => const SafeArea(
-    child: Padding(
-      padding: EdgeInsets.all(AppSpacing.lg),
-      child: Text('Create is coming soon.', key: Key('create-placeholder')),
-    ),
-  ),
-);
