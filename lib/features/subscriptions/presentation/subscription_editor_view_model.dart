@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/time/app_clock.dart';
 import '../domain/subscription.dart';
 import '../domain/subscription_catalog.dart';
 import '../domain/subscription_repository.dart';
+import '../../reminders/domain/reminder.dart';
+import '../../reminders/domain/reminder_repository.dart';
 
 enum SubscriptionEditorMode { create, edit }
 
@@ -11,6 +15,7 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
   SubscriptionEditorViewModel.create({
     required this.repository,
     required this.clock,
+    this.reminderRepository,
   }) : mode = SubscriptionEditorMode.create,
        original = null {
     _initialise();
@@ -20,6 +25,7 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
     required this.repository,
     required this.clock,
     required Subscription subscription,
+    this.reminderRepository,
   }) : mode = SubscriptionEditorMode.edit,
        original = subscription {
     _initialise(subscription);
@@ -29,6 +35,7 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
   final AppClock clock;
   final SubscriptionEditorMode mode;
   final Subscription? original;
+  final ReminderRepository? reminderRepository;
   late final TextEditingController nameController;
   late final TextEditingController amountController;
   late SubscriptionCategory category;
@@ -41,6 +48,10 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
   String? amountError;
   String? errorMessage;
   bool isSaving = false;
+  bool reminderEnabled = false;
+  ReminderLeadTime reminderLeadTime = ReminderLeadTime.onDay;
+  int reminderHour = 9;
+  int reminderMinute = 0;
   late final String _initialName;
   late final String _initialAmount;
   late final SubscriptionCategory _initialCategory;
@@ -87,6 +98,19 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
     _initialActive = active;
     nameController.addListener(notifyListeners);
     amountController.addListener(notifyListeners);
+    unawaited(_loadReminder());
+  }
+
+  Future<void> _loadReminder() async {
+    final value = await reminderRepository?.getPreference(
+      ReminderTarget(ReminderTargetType.subscription, original?.id ?? ''),
+    );
+    if (value == null) return;
+    reminderEnabled = value.enabled;
+    reminderLeadTime = value.leadTime;
+    reminderHour = value.localHour;
+    reminderMinute = value.localMinute;
+    notifyListeners();
   }
 
   void setCategory(SubscriptionCategory value) {
@@ -124,6 +148,22 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setReminderEnabled(bool value) {
+    reminderEnabled = value;
+    notifyListeners();
+  }
+
+  void setReminderLeadTime(ReminderLeadTime value) {
+    reminderLeadTime = value;
+    notifyListeners();
+  }
+
+  void setReminderTime(int hour, int minute) {
+    reminderHour = hour;
+    reminderMinute = minute;
+    notifyListeners();
+  }
+
   Future<bool> save() async {
     if (isSaving || !_validate()) return false;
     isSaving = true;
@@ -149,6 +189,19 @@ class SubscriptionEditorViewModel extends ChangeNotifier {
         await repository.createSubscription(value);
       } else {
         await repository.updateSubscription(value);
+      }
+      final reminderStore = reminderRepository;
+      if (reminderStore != null) {
+        await reminderStore.savePreference(
+          ReminderDraft(
+            target: ReminderTarget(ReminderTargetType.subscription, value.id),
+            enabled: reminderEnabled && value.active,
+            leadTime: reminderLeadTime,
+            localHour: reminderHour,
+            localMinute: reminderMinute,
+          ),
+          now,
+        );
       }
       isSaving = false;
       notifyListeners();

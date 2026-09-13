@@ -11,6 +11,7 @@ import '../features/profile/presentation/you_screen.dart';
 import '../features/subscriptions/presentation/subscriptions_screen.dart';
 import '../features/subscriptions/presentation/subscriptions_view_model.dart';
 import '../features/subscriptions/presentation/subscription_editor_sheet.dart';
+import '../features/subscriptions/presentation/subscription_details_screen.dart';
 import '../features/subscriptions/domain/subscription_repository.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/timeline/domain/timeline_repository.dart';
@@ -21,6 +22,8 @@ import '../features/trackers/presentation/tracker_detail_view_model.dart';
 import '../features/trackers/domain/tracker_repository.dart';
 import '../features/trackers/presentation/tracker_editor_sheet.dart';
 import '../features/today/presentation/today_view_model.dart';
+import '../features/reminders/domain/reminder_repository.dart';
+import '../features/reminders/presentation/reminders_settings_screen.dart';
 
 class AppRouter {
   AppRouter({
@@ -54,6 +57,16 @@ class AppRouter {
                child: TrackerDetailScreen(
                  trackerId: state.pathParameters['id']!,
                ),
+             ),
+           ),
+           GoRoute(
+             path: '/reminders',
+             builder: (_, _) => const RemindersSettingsScreen(),
+           ),
+           GoRoute(
+             path: '/subscriptions/:id',
+             builder: (_, state) => SubscriptionDetailsScreen(
+               subscriptionId: state.pathParameters['id']!,
              ),
            ),
            StatefulShellRoute.indexedStack(
@@ -212,6 +225,7 @@ Future<void> _createTracker(BuildContext context) async {
     context: context,
     repository: context.read<TrackerRepository>(),
     clock: context.read<AppClock>(),
+    reminderRepository: context.read<ReminderRepository>(),
   );
   if (result == true && context.mounted) {
     context.go('/today');
@@ -225,6 +239,7 @@ Future<void> _createSubscription(BuildContext context) async {
     context: context,
     repository: context.read<SubscriptionRepository>(),
     clock: context.read<AppClock>(),
+    reminderRepository: context.read<ReminderRepository>(),
   );
   if (result == true && context.mounted) {
     context.go('/subscriptions');
