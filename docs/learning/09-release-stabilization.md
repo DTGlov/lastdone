@@ -61,14 +61,14 @@ initialized `tz.UTC` object. Notification startup remains isolated from app
 startup and persistence; callers surface friendly recovery UI when permission
 or scheduling setup fails.
 
-`LastDoneDialog` is the shared visual shell for information, success, warning,
+`EverDunDialog` is the shared visual shell for information, success, warning,
 error, confirmation, and destructive-confirmation variants. It uses a custom
 rounded Material `Dialog` surface with semantic borders, scrollable content,
 accessible actions, and light/dark theme tokens. Field validation remains
 inline; recoverable save, permission, and discard decisions use the shared
 dialog instead of the stock `AlertDialog` appearance.
 
-`LastDoneCalendar` wraps `table_calendar` version 3.2.1. It owns its focused
+`EverDunCalendar` wraps `table_calendar` version 3.2.1. It owns its focused
 month while open and supplies field-specific bounds: historical completion is
 limited to today and earlier, first due dates begin today and can extend into
 the future, and subscription charge dates retain their existing editable
@@ -102,7 +102,7 @@ distinction separately from an initial query error.
 ## Timeline rendering follow-up
 
 The first reported stack excerpt contained only Flutter framework frames, so it
-did not provide a LastDone-owned source location. Source tracing identified the
+did not provide an EverDun-owned source location. Source tracing identified the
 concrete re-entry path: the Timeline scroll notification called `loadMore()`
 synchronously while the viewport was laying out, and that method called
 `notifyListeners()`. The resulting rebuild could request layout again; the

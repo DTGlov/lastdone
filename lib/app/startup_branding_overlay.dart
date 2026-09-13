@@ -69,14 +69,14 @@ class _StartupBrandingOverlayState extends State<StartupBrandingOverlay>
                           width: 150,
                           height: 150,
                           child: DunMascot(
-                            semanticLabel: 'Dun, the LastDone guide',
+                            semanticLabel: 'Dun, the EverDun guide',
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'LastDone',
+                      'EverDun',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ],

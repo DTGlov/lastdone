@@ -7,7 +7,7 @@ class DatabaseBootstrap {
     String? databasePath,
     DatabaseFactory? factory,
   }) async => (factory ?? databaseFactory).openDatabase(
-    databasePath ?? path.join(await getDatabasesPath(), 'lastdone.db'),
+    databasePath ?? path.join(await getDatabasesPath(), 'everdun.db'),
     options: OpenDatabaseOptions(
       version: version,
       onCreate: (db, _) async {

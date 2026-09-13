@@ -44,7 +44,7 @@ Future<void> bootstrap() async {
   );
   unawaited(reminderCoordinator.start());
   runApp(
-    LastDoneApp(
+    EverDunApp(
       clock: appClock,
       trackerRepository: trackerRepository,
       subscriptionRepository: trackerRepository,
@@ -62,8 +62,8 @@ Future<void> bootstrap() async {
   );
 }
 
-class LastDoneApp extends StatefulWidget {
-  const LastDoneApp({
+class EverDunApp extends StatefulWidget {
+  const EverDunApp({
     required this.clock,
     required this.trackerRepository,
     required this.subscriptionRepository,
@@ -85,10 +85,10 @@ class LastDoneApp extends StatefulWidget {
   final bool onboardingComplete;
   final Future<void> Function() onDispose;
   @override
-  State<LastDoneApp> createState() => _LastDoneAppState();
+  State<EverDunApp> createState() => _EverDunAppState();
 }
 
-class _LastDoneAppState extends State<LastDoneApp> {
+class _EverDunAppState extends State<EverDunApp> {
   StreamSubscription<NotificationDestination>? _notificationSubscription;
   late final AppRouter _appRouter = AppRouter(
     onboardingComplete: widget.onboardingComplete,
@@ -145,7 +145,7 @@ class _LastDoneAppState extends State<LastDoneApp> {
           ),
         ],
         child: MaterialApp.router(
-          title: 'LastDone',
+          title: 'EverDun',
           theme: buildLightTheme(),
           darkTheme: buildDarkTheme(),
           themeMode: preferences.themeMode,

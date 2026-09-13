@@ -1,6 +1,6 @@
 # Phase 7: reminders and notifications
 
-LastDone reminders are optional, local nudges for scheduled trackers and active subscriptions. They are deliberately separate from the user’s reminder preference and the device’s notification permission: a person can express intent even when the operating system has blocked delivery.
+EverDun reminders are optional, local nudges for scheduled trackers and active subscriptions. They are deliberately separate from the user’s reminder preference and the device’s notification permission: a person can express intent even when the operating system has blocked delivery.
 
 ## Journey and permission
 
@@ -14,7 +14,7 @@ The first enabled reminder opens an in-app explanation. Only “Allow reminders�
 
 `ReminderCoordinator` (`lib/features/reminders/application/reminder_coordinator.dart`) reads the existing tracker overview and subscription streams, then calculates at most one future candidate per enabled target. Tracker dates use `TodayClassifier.nextDueDateFor`; subscription dates use the existing `nextChargeOnOrAfter` calculator. Preferred lead times fall back to the due/charge date when the lead moment has passed. Overdue occurrences are not nagged repeatedly.
 
-Candidates are sorted nearest first and at most 60 LastDone requests are scheduled, leaving headroom under iOS’s 64 pending-request limit. Requests are one-shot, not repeating, so monthly 29/30/31 clamping and leap-day behavior remain owned by LastDone’s calendar-aware rules. Preferences beyond the window remain enabled and are reconsidered on later reconciliation. A fired recurrence may wait until the app resumes before its next one-shot request is created.
+Candidates are sorted nearest first and at most 60 EverDun requests are scheduled, leaving headroom under iOS’s 64 pending-request limit. Requests are one-shot, not repeating, so monthly 29/30/31 clamping and leap-day behavior remain owned by EverDun’s calendar-aware rules. Preferences beyond the window remain enabled and are reconsidered on later reconciliation. A fired recurrence may wait until the app resumes before its next one-shot request is created.
 
 `LocalNotificationGateway` (`lib/features/reminders/data/notification_gateway.dart`) owns plugin calls, permission inspection, local IANA timezone setup, scheduling, cancellation, pending requests, test delivery, and typed response payloads. Payloads contain only a target type and stable ID. App-layer routing opens `/trackers/:id` or `/subscriptions/:id` after the router is ready; malformed payloads are ignored. Subscription details are read-only apart from the existing editor action.
 

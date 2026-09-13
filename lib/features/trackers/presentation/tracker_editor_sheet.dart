@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
-import '../../../core/design_system/lastdone_dialog.dart';
-import '../../../core/design_system/lastdone_calendar.dart';
+import '../../../core/design_system/everdun_dialog.dart';
+import '../../../core/design_system/everdun_calendar.dart';
 import '../../../core/time/app_clock.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
@@ -140,11 +140,11 @@ class _TrackerEditorSheetState extends State<TrackerEditorSheet> {
     }
     final saved = await model.save();
     if (!saved && mounted && model.errorMessage != null) {
-      await showLastDoneDialog<void>(
+      await showEverDunDialog<void>(
         context: context,
         title: 'Tracker not saved',
         message: model.errorMessage!,
-        variant: LastDoneDialogVariant.error,
+        variant: EverDunDialogVariant.error,
         primaryLabel: 'Keep editing',
       );
     }
@@ -156,10 +156,10 @@ class _TrackerEditorSheetState extends State<TrackerEditorSheet> {
       final gateway = context.read<NotificationGateway>();
       final status = await gateway.permissionStatus();
       if (status == NotificationPermissionStatus.authorized || !mounted) return;
-      final allow = await showLastDoneDialog<bool>(
+      final allow = await showEverDunDialog<bool>(
         context: context,
         title: 'A gentle reminder?',
-        message: 'LastDone can nudge you locally before this tracker is due. Nothing is sent to a server.',
+        message: 'EverDun can nudge you locally before this tracker is due. Nothing is sent to a server.',
         primaryLabel: 'Allow reminders',
         primaryResult: true,
         secondaryLabel: 'Not now',
@@ -168,11 +168,11 @@ class _TrackerEditorSheetState extends State<TrackerEditorSheet> {
       if (allow == true) await gateway.requestPermission();
     } catch (_) {
       if (mounted) {
-        await showLastDoneDialog<void>(
+        await showEverDunDialog<void>(
           context: context,
           title: 'Reminder setup is unavailable',
           message: 'The tracker can still be saved, but its local reminder could not be configured. You can try again later from Reminders.',
-          variant: LastDoneDialogVariant.warning,
+          variant: EverDunDialogVariant.warning,
           primaryLabel: 'Continue',
         );
       }
@@ -180,11 +180,11 @@ class _TrackerEditorSheetState extends State<TrackerEditorSheet> {
   }
 
   Future<void> _confirmDiscard(TrackerEditorViewModel model) async {
-    final discard = await showLastDoneDialog<bool>(
+    final discard = await showEverDunDialog<bool>(
       context: context,
       title: 'Leave without saving?',
       message: 'Your changes are still fresh. Would you like to keep editing?',
-      variant: LastDoneDialogVariant.confirmation,
+      variant: EverDunDialogVariant.confirmation,
       primaryLabel: 'Leave',
       primaryResult: true,
       secondaryLabel: 'Keep editing',
@@ -417,7 +417,7 @@ class _CompletionField extends StatelessWidget {
     final model = this.model;
     final today = model.clock.now.toLocal();
     final todayDate = DateTime(today.year, today.month, today.day);
-    final chosen = await showLastDoneCalendar(
+    final chosen = await showEverDunCalendar(
       context: context,
       firstDay: DateTime(2000),
       lastDay: todayDate,
@@ -516,7 +516,7 @@ class _FirstDueDateField extends StatelessWidget {
   Future<void> _chooseDate(BuildContext context) async {
     final today = model.clock.now.toLocal();
     final todayDate = DateTime(today.year, today.month, today.day);
-    final chosen = await showLastDoneCalendar(
+    final chosen = await showEverDunCalendar(
       context: context,
       firstDay: todayDate,
       lastDay: DateTime(todayDate.year + 20),

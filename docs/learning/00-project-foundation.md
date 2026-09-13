@@ -1,6 +1,6 @@
 # Project foundation
 
-LastDone is an offline-first Flutter app for remembering recurring parts of everyday life. Phase 0 establishes the app shell, design language, local database boundary, and placeholder destinations. Product workflows, onboarding, tracker CRUD, notifications, sync, and production Dun artwork remain intentionally unimplemented.
+EverDun is an offline-first Flutter app for remembering recurring parts of everyday life. Phase 0 established the app shell, design language, local database boundary, and placeholder destinations. Product workflows have since grown through later feature phases.
 
 ## Architecture
 

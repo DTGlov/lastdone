@@ -1,6 +1,6 @@
 # Visual refresh
 
-The visual refresh keeps LastDone’s approved behavior intact while making the
+The visual refresh keeps EverDun’s approved behavior intact while making the
 interface calmer, more compact, and more recognisable. Warm parchment and
 near-white surfaces are paired with deep forest primary colour in light mode;
 dark mode uses charcoal-green surfaces, muted mint selection, and visible

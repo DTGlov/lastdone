@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../../../core/time/app_clock.dart';
+import '../../../core/text/count_text.dart';
 import '../../subscriptions/domain/subscription.dart';
 import '../../subscriptions/domain/subscription_repository.dart';
 import '../../today/domain/today_overview.dart';
@@ -203,7 +204,7 @@ class ReminderCoordinator with WidgetsBindingObserver {
     final days = _dateOnly(date).difference(today).inDays;
     if (days == 0) return 'today';
     if (days == 1) return 'tomorrow';
-    return 'in $days days';
+    return 'in ${daysText(days)}';
   }
 
   static DateTime _dateOnly(DateTime value) {

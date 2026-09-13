@@ -137,7 +137,7 @@ class _WelcomeStep extends StatelessWidget {
       ),
       const SizedBox(height: AppSpacing.xl),
       Text(
-        'LastDone',
+        'EverDun',
         style: Theme.of(context).textTheme.displaySmall,
         textAlign: TextAlign.center,
       ),
@@ -477,7 +477,7 @@ class _ReminderStep extends StatelessWidget {
       ),
       const SizedBox(height: AppSpacing.md),
       Text(
-        'LastDone can remind you before something becomes overdue. You can decide about device notifications later, when reminders are ready.',
+        'EverDun can remind you before something becomes overdue. You can decide about device notifications later, when reminders are ready.',
         style: Theme.of(context).textTheme.bodyLarge,
       ),
     ],

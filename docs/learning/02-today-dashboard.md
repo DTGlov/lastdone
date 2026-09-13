@@ -1,6 +1,6 @@
 # Phase 2: Today dashboard
 
-Today is a read-only overview of the active trackers stored by LastDone. The screen does not read SQLite itself. `LocalTrackerRepository` performs one overview query that returns each tracker and its latest completion, then publishes an immutable list through `TrackerOverviewRepository`.
+Today is a read-only overview of the active trackers stored by EverDun. The screen does not read SQLite itself. `LocalTrackerRepository` performs one overview query that returns each tracker and its latest completion, then publishes an immutable list through `TrackerOverviewRepository`.
 
 ```mermaid
 flowchart LR

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lastdone/core/database/database_bootstrap.dart';
-import 'package:lastdone/features/trackers/data/local_tracker_repository.dart';
-import 'package:lastdone/features/trackers/domain/tracker.dart';
+import 'package:everdun/core/database/database_bootstrap.dart';
+import 'package:everdun/features/trackers/data/local_tracker_repository.dart';
+import 'package:everdun/features/trackers/domain/tracker.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
