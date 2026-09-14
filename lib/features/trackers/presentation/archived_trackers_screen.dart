@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
-import '../../../core/design_system/lastdone_dialog.dart';
+import '../../../core/design_system/everdun_dialog.dart';
 import '../../../core/time/app_clock.dart';
 import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
@@ -57,20 +57,20 @@ class ArchivedTrackersScreen extends StatelessWidget {
     try {
       await repository.restoreTracker(tracker.id, context.read<AppClock>().now);
       if (!context.mounted) return;
-      await showLastDoneDialog<void>(
+      await showEverDunDialog<void>(
         context: context,
         title: 'Tracker restored',
         message: 'It is back in Today with its completion history intact.',
-        variant: LastDoneDialogVariant.success,
+        variant: EverDunDialogVariant.success,
         primaryLabel: 'Done',
       );
     } catch (_) {
       if (!context.mounted) return;
-      await showLastDoneDialog<void>(
+      await showEverDunDialog<void>(
         context: context,
         title: 'Could not restore tracker',
         message: 'Your tracker is still archived. Please try again.',
-        variant: LastDoneDialogVariant.error,
+        variant: EverDunDialogVariant.error,
         primaryLabel: 'Okay',
       );
     }

@@ -15,7 +15,9 @@ import '../features/subscriptions/presentation/subscription_details_screen.dart'
 import '../features/subscriptions/domain/subscription_repository.dart';
 import '../features/timeline/presentation/timeline_screen.dart';
 import '../features/timeline/domain/timeline_repository.dart';
+import '../features/timeline/domain/planner_repository.dart';
 import '../features/timeline/presentation/timeline_view_model.dart';
+import '../features/timeline/presentation/planner_view_model.dart';
 import '../features/trackers/presentation/today_screen.dart';
 import '../features/trackers/presentation/tracker_detail_screen.dart';
 import '../features/trackers/presentation/tracker_detail_view_model.dart';
@@ -127,11 +129,31 @@ class AppRouter {
                          timelineRepository =
                              const UnavailableTimelineRepository();
                        }
-                       return ChangeNotifierProvider(
-                         create: (_) => TimelineViewModel(
-                           repository: timelineRepository,
-                           clock: context.read<AppClock>(),
-                         ),
+                       return MultiProvider(
+                         providers: [
+                           ChangeNotifierProvider(
+                             create: (_) => TimelineViewModel(
+                               repository: timelineRepository,
+                               clock: context.read<AppClock>(),
+                             ),
+                           ),
+                           ChangeNotifierProvider(
+                             create: (_) => PlannerViewModel(
+                               plannerRepository:
+                                   trackerRepository is PlannerRepository
+                                   ? trackerRepository as PlannerRepository
+                                   : const UnavailablePlannerRepository(),
+                               overviewRepository:
+                                   trackerRepository
+                                       is TrackerOverviewRepository
+                                   ? trackerRepository
+                                   : const UnavailableTrackerOverviewRepository(),
+                               subscriptionRepository: context
+                                   .read<SubscriptionRepository>(),
+                               clock: context.read<AppClock>(),
+                             ),
+                           ),
+                         ],
                          child: const TimelineScreen(),
                        );
                      },

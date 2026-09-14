@@ -9,6 +9,7 @@ import '../domain/tracker.dart';
 import '../domain/tracker_repository.dart';
 import '../../timeline/domain/timeline.dart';
 import '../../timeline/domain/timeline_repository.dart';
+import '../../timeline/domain/planner_repository.dart';
 import '../../reminders/domain/reminder.dart';
 import '../../reminders/domain/reminder_repository.dart';
 import '../../profile/domain/profile_settings.dart';
@@ -20,6 +21,7 @@ class LocalTrackerRepository
         SubscriptionRepository,
         SubscriptionCancellationRepository,
         TimelineRepository,
+        PlannerRepository,
         ReminderRepository,
         ProfileStatisticsRepository {
   LocalTrackerRepository({required this.database, this.clock});
@@ -620,6 +622,26 @@ class LocalTrackerRepository
       hasMore: hasMore,
       monthlyCount: monthlyCount,
     );
+  }
+
+  @override
+  Future<List<TimelineEntry>> queryCompletionsInRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final rows = await database.rawQuery(
+      '''
+      SELECT c.id AS completion_id, c.tracker_id, c.completed_at,
+             t.title, t.category_key, t.icon_key, t.color_key,
+             t.repeat_rule, t.repeat_interval
+      FROM completions c
+      LEFT JOIN trackers t ON t.id = c.tracker_id
+      WHERE c.completed_at >= ? AND c.completed_at < ?
+      ORDER BY c.completed_at ASC, c.id ASC
+      ''',
+      [start.toIso8601String(), end.toIso8601String()],
+    );
+    return List.unmodifiable(rows.map(_timelineEntryFromRow));
   }
 
   static TimelineEntry _timelineEntryFromRow(Map<String, Object?> row) {

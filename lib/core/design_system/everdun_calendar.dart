@@ -4,6 +4,85 @@ import 'package:table_calendar/table_calendar.dart';
 import 'app_icons.dart';
 import 'design_tokens.dart';
 
+/// The inline calendar surface used by Planner and the modal date picker.
+class EverDunMonthCalendar<T> extends StatelessWidget {
+  const EverDunMonthCalendar({
+    required this.firstDay,
+    required this.lastDay,
+    required this.focusedDay,
+    required this.onDaySelected,
+    required this.onPageChanged,
+    this.selectedDayPredicate,
+    this.eventLoader,
+    this.calendarBuilders,
+    this.headerStyle,
+    this.daysOfWeekStyle,
+    this.calendarStyle,
+    super.key,
+  });
+  final DateTime firstDay, lastDay, focusedDay;
+  final void Function(DateTime selectedDay, DateTime focusedDay) onDaySelected;
+  final void Function(DateTime focusedDay) onPageChanged;
+  final bool Function(DateTime day)? selectedDayPredicate;
+  final List<T> Function(DateTime day)? eventLoader;
+  final CalendarBuilders<T>? calendarBuilders;
+  final HeaderStyle? headerStyle;
+  final DaysOfWeekStyle? daysOfWeekStyle;
+  final CalendarStyle? calendarStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return TableCalendar<T>(
+      firstDay: firstDay,
+      lastDay: lastDay,
+      focusedDay: focusedDay,
+      selectedDayPredicate: selectedDayPredicate,
+      eventLoader: eventLoader,
+      onDaySelected: onDaySelected,
+      onPageChanged: onPageChanged,
+      calendarBuilders: calendarBuilders ?? CalendarBuilders<T>(),
+      headerStyle:
+          headerStyle ??
+          HeaderStyle(
+            titleTextStyle: theme.textTheme.titleMedium!,
+            formatButtonVisible: false,
+            leftChevronIcon: const Icon(AppIcons.previous),
+            rightChevronIcon: const Icon(AppIcons.next),
+          ),
+      daysOfWeekStyle:
+          daysOfWeekStyle ??
+          DaysOfWeekStyle(
+            weekdayStyle: theme.textTheme.labelSmall!,
+            weekendStyle: theme.textTheme.labelSmall!,
+          ),
+      calendarStyle:
+          calendarStyle ??
+          CalendarStyle(
+            outsideDaysVisible: false,
+            defaultTextStyle: theme.textTheme.bodyMedium!,
+            weekendTextStyle: theme.textTheme.bodyMedium!,
+            disabledTextStyle: theme.textTheme.bodyMedium!.copyWith(
+              color: scheme.onSurface.withValues(alpha: .35),
+            ),
+            todayDecoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: scheme.primary),
+            ),
+            selectedDecoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: scheme.primary,
+            ),
+            selectedTextStyle: theme.textTheme.bodyMedium!.copyWith(
+              color: scheme.onPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+    );
+  }
+}
+
 Future<DateTime?> showEverDunCalendar({
   required BuildContext context,
   required DateTime firstDay,

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
-import '../../../core/design_system/lastdone_dialog.dart';
+import '../../../core/design_system/everdun_dialog.dart';
 import '../../../core/time/app_clock.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../reminders/data/notification_gateway.dart';
@@ -113,11 +113,11 @@ class _SubscriptionDetailsScreenState extends State<SubscriptionDetailsScreen> {
 
   Future<void> _cancel(Subscription subscription) async {
     if (_changingState || !mounted) return;
-    final confirmed = await showLastDoneDialog<bool>(
+    final confirmed = await showEverDunDialog<bool>(
       context: context,
       title: 'Cancel subscription?',
       message: 'Its reminders and active totals will stop, but the saved details remain available to restore later.',
-      variant: LastDoneDialogVariant.confirmation,
+      variant: EverDunDialogVariant.confirmation,
       icon: Icons.cancel_outlined,
       primaryLabel: 'Cancel subscription',
       primaryResult: true,
@@ -149,11 +149,11 @@ class _SubscriptionDetailsScreenState extends State<SubscriptionDetailsScreen> {
           }
         } catch (_) {
           if (mounted) {
-            await showLastDoneDialog<void>(
+            await showEverDunDialog<void>(
               context: context,
               title: 'Subscription cancelled',
               message: 'Your saved data is safe, but its reminder could not be cancelled yet.',
-              variant: LastDoneDialogVariant.warning,
+              variant: EverDunDialogVariant.warning,
               primaryLabel: 'Continue',
             );
           }
@@ -167,11 +167,11 @@ class _SubscriptionDetailsScreenState extends State<SubscriptionDetailsScreen> {
       }
     } catch (_) {
       if (mounted) {
-        await showLastDoneDialog<void>(
+        await showEverDunDialog<void>(
           context: context,
           title: 'Could not cancel subscription',
           message: 'Your subscription is still active. Please try again.',
-          variant: LastDoneDialogVariant.error,
+          variant: EverDunDialogVariant.error,
           primaryLabel: 'Okay',
         );
       }
@@ -197,11 +197,11 @@ class _SubscriptionDetailsScreenState extends State<SubscriptionDetailsScreen> {
       }
     } catch (_) {
       if (mounted) {
-        await showLastDoneDialog<void>(
+        await showEverDunDialog<void>(
           context: context,
           title: 'Could not restore subscription',
           message: 'It is still cancelled. Please try again.',
-          variant: LastDoneDialogVariant.error,
+          variant: EverDunDialogVariant.error,
           primaryLabel: 'Okay',
         );
       }

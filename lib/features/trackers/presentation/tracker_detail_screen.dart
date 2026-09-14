@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
-import '../../../core/design_system/lastdone_dialog.dart';
+import '../../../core/design_system/everdun_dialog.dart';
 import '../../../core/time/app_clock.dart';
 import '../../../core/text/count_text.dart';
 import '../../../core/widgets/dun_view.dart';
@@ -115,11 +115,11 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
     TrackerDetailViewModel model,
   ) async {
     if (_archiving || model.details?.tracker.archivedAt != null) return;
-    final confirmed = await showLastDoneDialog<bool>(
+    final confirmed = await showEverDunDialog<bool>(
       context: context,
       title: 'Archive tracker?',
       message: 'It will leave Today and its reminders will stop. Completion history stays safe, and you can restore it later.',
-      variant: LastDoneDialogVariant.confirmation,
+      variant: EverDunDialogVariant.confirmation,
       icon: Icons.archive_outlined,
       primaryLabel: 'Archive tracker',
       primaryResult: true,
@@ -157,11 +157,11 @@ class _TrackerDetailScreenState extends State<TrackerDetailScreen>
       }
     } catch (_) {
       if (mounted) {
-        await showLastDoneDialog<void>(
+        await showEverDunDialog<void>(
           context: context,
           title: 'Tracker not archived',
           message: 'We could not archive this tracker yet. Please try again.',
-          variant: LastDoneDialogVariant.error,
+          variant: EverDunDialogVariant.error,
           primaryLabel: 'Okay',
         );
       }
