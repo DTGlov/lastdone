@@ -56,3 +56,27 @@ Complete trackers, undo one, edit metadata, switch tabs, search, filter by
 category, scroll beyond one page, relaunch, and compare Today/Yesterday labels
 around a date change. Also review empty and error states, light/dark contrast,
 large text, compact widths, scrolling, semantics, and reduced motion.
+## History row rendering follow-up
+
+Manual testing showed a real completion count and a visible date group header,
+but no completion card beneath the header. The repository result, ViewModel
+entries, and date grouping were therefore present; the failure was in the old
+presentation layout. Each row placed an `Expanded` timeline-rail child inside
+the vertically unbounded nested `Column` used by the page `ListView`. That
+flex layout could fail before the row received a usable size.
+
+History now flattens each non-empty group into one ordered presentation
+collection: a date header followed by its completion rows. A single
+`CustomScrollView` renders the page, and one stable `SliverList` renders that
+flattened history collection. Group headers use date keys and completion rows
+use completion-ID keys. Rows render directly without opacity, size, or
+entrance-animation wrappers. The rail marker no longer depends on an
+unbounded flex child, and each row includes its time and category (or
+“Removed tracker” metadata).
+
+The existing joined completion query was not changed because the count,
+entries, and group header proved that persisted completion data already
+existed. The rendering path continues to include active, archived, and
+missing-tracker completion metadata; missing trackers remain navigable through
+the existing details route where applicable. Planner projections continue to
+use their separate rendering path and are never inserted into History.

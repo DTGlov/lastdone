@@ -5,6 +5,7 @@ import '../../../core/design_system/design_tokens.dart';
 import '../../../core/design_system/everdun_dialog.dart';
 import '../../../core/time/app_clock.dart';
 import '../domain/tracker.dart';
+import '../domain/tracker_icon.dart';
 import '../domain/tracker_repository.dart';
 import 'tracker_editor_sheet.dart' show TrackerCategoryLabel;
 
@@ -92,7 +93,11 @@ class _ArchivedTrackerTile extends StatelessWidget {
     clipBehavior: Clip.antiAlias,
     child: ListTile(
       tileColor: Colors.transparent,
-      leading: Icon(_trackerIcon(tracker.iconKey)),
+      leading: Text(
+        TrackerIcons.resolve(tracker.iconKey).emoji,
+        semanticsLabel: '${TrackerIcons.resolve(tracker.iconKey).label} icon',
+        style: const TextStyle(fontSize: 24),
+      ),
       title: Text(tracker.title),
       subtitle: Text(
         '${tracker.category.label} · ${tracker.repeatRule.labelFor(tracker.repeatInterval)}',
@@ -101,18 +106,6 @@ class _ArchivedTrackerTile extends StatelessWidget {
     ),
   );
 }
-
-IconData _trackerIcon(String key) => switch (key) {
-  TrackerIconKeys.home => Icons.home_outlined,
-  TrackerIconKeys.vehicle => Icons.directions_car_outlined,
-  TrackerIconKeys.personalCare => Icons.spa_outlined,
-  TrackerIconKeys.technology => Icons.devices_outlined,
-  TrackerIconKeys.relationships => Icons.people_outline,
-  TrackerIconKeys.water => Icons.water_drop_outlined,
-  TrackerIconKeys.tools => Icons.build_outlined,
-  TrackerIconKeys.leaf => Icons.eco_outlined,
-  _ => Icons.checklist_outlined,
-};
 
 class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.onRetry});

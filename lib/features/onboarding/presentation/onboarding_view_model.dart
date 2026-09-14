@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/time/app_clock.dart';
 import '../../trackers/domain/tracker.dart';
+import '../../trackers/domain/tracker_icon.dart';
 import '../../trackers/domain/tracker_repository.dart';
 import '../data/onboarding_status_store.dart';
 import '../domain/onboarding_models.dart';
@@ -131,12 +132,22 @@ class OnboardingViewModel extends ChangeNotifier {
   };
 
   static String _trackerIcon(LifeArea area) => switch (area) {
-    LifeArea.home => TrackerIconKeys.home,
-    LifeArea.vehicle => TrackerIconKeys.vehicle,
-    LifeArea.personalCare => TrackerIconKeys.personalCare,
-    LifeArea.technology => TrackerIconKeys.technology,
-    LifeArea.relationships => TrackerIconKeys.relationships,
-    LifeArea.custom => TrackerIconKeys.checklist,
+    LifeArea.home => TrackerIcons.storageKeyForLegacy(TrackerIconKeys.home),
+    LifeArea.vehicle => TrackerIcons.storageKeyForLegacy(
+      TrackerIconKeys.vehicle,
+    ),
+    LifeArea.personalCare => TrackerIcons.storageKeyForLegacy(
+      TrackerIconKeys.personalCare,
+    ),
+    LifeArea.technology => TrackerIcons.storageKeyForLegacy(
+      TrackerIconKeys.technology,
+    ),
+    LifeArea.relationships => TrackerIcons.storageKeyForLegacy(
+      TrackerIconKeys.relationships,
+    ),
+    LifeArea.custom => TrackerIcons.storageKeyForLegacy(
+      TrackerIconKeys.checklist,
+    ),
   };
 
   static TrackerColor _trackerColor(LifeArea area) => switch (area) {

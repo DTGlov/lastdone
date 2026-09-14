@@ -8,6 +8,7 @@ import '../../../core/design_system/everdun_calendar.dart';
 import '../../../core/design_system/design_tokens.dart';
 import '../../../core/widgets/dun_view.dart';
 import '../../trackers/domain/tracker.dart';
+import '../../trackers/domain/tracker_icon.dart';
 import '../../subscriptions/domain/subscription.dart';
 import '../domain/planner.dart';
 import '../domain/timeline.dart';
@@ -44,35 +45,79 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   },
                   child: RefreshIndicator(
                     onRefresh: model.retry,
-                    child: ListView(
+                    child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        AppSpacing.md,
-                        AppSpacing.lg,
-                        112,
-                      ),
-                      children: [
-                        _ModeSwitch(
-                          planner: false,
-                          onChanged: () => setState(() => _planner = true),
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            AppSpacing.md,
+                            AppSpacing.lg,
+                            0,
+                          ),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate([
+                              _ModeSwitch(
+                                planner: false,
+                                onChanged: () =>
+                                    setState(() => _planner = true),
+                              ),
+                              _Header(model: model),
+                              const SizedBox(height: AppSpacing.md),
+                              _MonthlySummary(model: model),
+                              const SizedBox(height: AppSpacing.md),
+                              _Filters(model: model),
+                              const SizedBox(height: AppSpacing.md),
+                            ]),
+                          ),
                         ),
-                        _Header(model: model),
-                        const SizedBox(height: AppSpacing.md),
-                        _MonthlySummary(model: model),
-                        const SizedBox(height: AppSpacing.md),
-                        _Filters(model: model),
-                        const SizedBox(height: AppSpacing.md),
-                        switch (model.state) {
-                          TimelineLoadState.loading => const _LoadingState(),
-                          TimelineLoadState.error => _ErrorState(model: model),
-                          TimelineLoadState.empty =>
-                            model.hasFilters
-                                ? _NoResultsState(onClear: model.clearFilters)
-                                : const _EmptyState(),
+                        ...switch (model.state) {
+                          TimelineLoadState.loading => [
+                            const SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                AppSpacing.lg,
+                                0,
+                                AppSpacing.lg,
+                                112,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _LoadingState(),
+                              ),
+                            ),
+                          ],
+                          TimelineLoadState.error => [
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.lg,
+                                0,
+                                AppSpacing.lg,
+                                112,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _ErrorState(model: model),
+                              ),
+                            ),
+                          ],
+                          TimelineLoadState.empty => [
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppSpacing.lg,
+                                0,
+                                AppSpacing.lg,
+                                112,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: model.hasFilters
+                                    ? _NoResultsState(
+                                        onClear: model.clearFilters,
+                                      )
+                                    : const _EmptyState(),
+                              ),
+                            ),
+                          ],
                           TimelineLoadState.content => _TimelineFeed(
                             model: model,
-                          ),
+                          ).slivers,
                         },
                       ],
                     ),
@@ -219,57 +264,97 @@ class _Filters extends StatelessWidget {
   );
 }
 
-class _TimelineFeed extends StatelessWidget {
+class _TimelineFeed {
   const _TimelineFeed({required this.model});
   final TimelineViewModel model;
 
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      ...model.groups.map(
-        (group) => _TimelineGroup(group: group, currentDate: model.currentDate),
+  List<_TimelineFeedItem> get items => [
+    for (final group in model.groups)
+      if (group.entries.isNotEmpty) ...[
+        _TimelineGroupItem(group.date, model.currentDate),
+        ...group.entries.map(_TimelineEntryItem.new),
+      ],
+  ];
+
+  List<Widget> get slivers {
+    final feedItems = items;
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          112,
+        ),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => feedItems[index].build(context),
+            childCount: feedItems.length,
+          ),
+        ),
       ),
       if (model.paginationError != null)
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(model.paginationError!),
-            TextButton(onPressed: model.loadMore, child: const Text('Retry')),
-          ],
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            0,
+            AppSpacing.lg,
+            112,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(model.paginationError!),
+                TextButton(
+                  onPressed: model.loadMore,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
         )
       else if (model.isLoadingMore)
-        const Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
-          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        const SliverPadding(
+          padding: EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 112),
+          sliver: SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+          ),
         ),
-    ],
-  );
+    ];
+  }
 }
 
-class _TimelineGroup extends StatelessWidget {
-  const _TimelineGroup({required this.group, required this.currentDate});
-  final TimelineGroup group;
+abstract class _TimelineFeedItem {
+  Widget build(BuildContext context);
+}
+
+class _TimelineGroupItem extends _TimelineFeedItem {
+  _TimelineGroupItem(this.date, this.currentDate);
+  final DateTime date;
   final DateTime currentDate;
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-        child: Text(
-          _groupLabel(context, group.date, currentDate),
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-      ),
-      ...group.entries.map(
-        (entry) =>
-            _TimelineEntryRow(key: ValueKey(entry.completionId), entry: entry),
-      ),
-      const SizedBox(height: AppSpacing.md),
-    ],
+  Widget build(BuildContext context) => Padding(
+    key: ValueKey('timeline-group-${date.year}-${date.month}-${date.day}'),
+    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+    child: Text(
+      _groupLabel(context, date, currentDate),
+      style: Theme.of(context).textTheme.titleLarge,
+    ),
   );
+}
+
+class _TimelineEntryItem extends _TimelineFeedItem {
+  _TimelineEntryItem(this.entry);
+  final TimelineEntry entry;
+
+  @override
+  Widget build(BuildContext context) =>
+      _TimelineEntryRow(key: ValueKey(entry.completionId), entry: entry);
 }
 
 class _TimelineEntryRow extends StatelessWidget {
@@ -285,14 +370,14 @@ class _TimelineEntryRow extends StatelessWidget {
     child: Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 24,
-            child: Column(
-              children: [
-                const SizedBox(height: 18),
-                Container(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 18),
+              child: Center(
+                child: Container(
                   width: 9,
                   height: 9,
                   decoration: BoxDecoration(
@@ -304,13 +389,7 @@ class _TimelineEntryRow extends StatelessWidget {
                     ),
                   ),
                 ),
-                Expanded(
-                  child: Container(
-                    width: 1,
-                    color: Theme.of(context).dividerColor,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           Expanded(
@@ -346,6 +425,12 @@ class _TimelineEntryRow extends StatelessWidget {
                               '${_timeLabel(context, entry.completedAt)}${entry.cadence == null ? '' : ' · ${entry.cadence}'}',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
+                            Text(
+                              entry.missingTracker
+                                  ? 'Removed tracker'
+                                  : _categoryLabel(entry.category),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                           ],
                         ),
                       ),
@@ -376,7 +461,10 @@ class _TimelineIcon extends StatelessWidget {
     child: SizedBox(
       width: 40,
       height: 40,
-      child: Icon(_trackerIcon(entry.iconKey), size: 20),
+      child: Text(
+        TrackerIcons.resolve(entry.iconKey).emoji,
+        style: const TextStyle(fontSize: 22),
+      ),
     ),
   );
 }
@@ -666,11 +754,14 @@ class _PlannerRow extends StatelessWidget {
         child: ListTile(
           tileColor: Colors.transparent,
           onTap: () => context.push(item.navigationTarget),
-          leading: Icon(
-            isCharge
-                ? Icons.receipt_long_outlined
-                : _trackerIcon(item.iconKey ?? ''),
-          ),
+          leading: isCharge
+              ? const Icon(Icons.receipt_long_outlined)
+              : Text(
+                  TrackerIcons.resolve(item.iconKey ?? '').emoji,
+                  semanticsLabel:
+                      '${TrackerIcons.resolve(item.iconKey ?? '').label} icon',
+                  style: const TextStyle(fontSize: 24),
+                ),
           title: Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis),
           subtitle: Text(detail),
           trailing: const Icon(AppIcons.next),
@@ -708,17 +799,6 @@ String _categoryLabel(TrackerCategory category) => switch (category) {
   TrackerCategory.technology => 'Technology',
   TrackerCategory.relationships => 'Relationships',
   TrackerCategory.custom => 'Custom',
-};
-
-IconData _trackerIcon(String key) => switch (key) {
-  TrackerIconKeys.home => Icons.home_outlined,
-  TrackerIconKeys.vehicle => Icons.directions_car_outlined,
-  TrackerIconKeys.personalCare => Icons.spa_outlined,
-  TrackerIconKeys.technology => Icons.devices_outlined,
-  TrackerIconKeys.relationships => Icons.people_outline,
-  TrackerIconKeys.tools => Icons.build_outlined,
-  TrackerIconKeys.leaf => Icons.eco_outlined,
-  _ => Icons.checklist_outlined,
 };
 
 Color _trackerColor(BuildContext context, TrackerColor color) {

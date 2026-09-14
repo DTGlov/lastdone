@@ -275,6 +275,7 @@ class _ServiceField extends StatelessWidget {
     final chosen = await showModalBottomSheet<SubscriptionCatalogEntry?>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (_) => _ServicePicker(
         category: model.category,
@@ -295,6 +296,40 @@ class _ServicePicker extends StatefulWidget {
 
 class _ServicePickerState extends State<_ServicePicker> {
   String query = '';
+  late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
+  late final DraggableScrollableController _sheetController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _searchFocusNode = FocusNode()..addListener(_handleSearchFocus);
+    _sheetController = DraggableScrollableController();
+  }
+
+  void _handleSearchFocus() {
+    if (!_searchFocusNode.hasFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_sheetController.isAttached) return;
+      _sheetController.animateTo(
+        0.92,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchFocusNode
+      ..removeListener(_handleSearchFocus)
+      ..dispose();
+    _searchController.dispose();
+    _sheetController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final entries = subscriptionCatalog.where((entry) {
@@ -305,65 +340,116 @@ class _ServicePickerState extends State<_ServicePicker> {
               entry.name.toLowerCase().contains(term) ||
               entry.aliases.any((alias) => alias.contains(term)));
     }).toList();
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Choose a service',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              autofocus: true,
-              onChanged: (value) => setState(() => query = value),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(AppIcons.search),
-                labelText: 'Search services',
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  ...entries.map(
-                    (entry) => ListTile(
-                      leading: SubscriptionLogo(
-                        name: entry.name,
-                        category: entry.category,
-                        catalogServiceId: entry.id,
-                        logoKey: entry.logoKey,
-                      ),
-                      title: Text(entry.name),
-                      trailing: widget.selected?.id == entry.id
-                          ? const Icon(Icons.check)
-                          : null,
-                      onTap: () => Navigator.pop(context, entry),
+    final media = MediaQuery.of(context);
+    final bottomInset = media.viewInsets.bottom > 0
+        ? media.viewInsets.bottom
+        : media.padding.bottom;
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: SafeArea(
+        top: true,
+        bottom: false,
+        child: DraggableScrollableSheet(
+          controller: _sheetController,
+          expand: false,
+          initialChildSize: 0.72,
+          minChildSize: 0.45,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) => GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => FocusScope.of(context).unfocus(),
+            child: Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                  AppSpacing.lg,
+                  0,
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Choose a service',
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
-                  ),
-                  ListTile(
-                    leading: const SubscriptionLogo(
-                      name: 'Custom',
-                      category: SubscriptionCategory.custom,
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      widget.category.label,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    title: const Text('Custom subscription'),
-                    subtitle: const Text('Something else you want to remember'),
-                    onTap: () => Navigator.pop(
-                      context,
-                      const SubscriptionCatalogEntry(
-                        id: 'custom',
-                        name: 'Custom subscription',
-                        category: SubscriptionCategory.custom,
+                    const SizedBox(height: AppSpacing.md),
+                    TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      autofocus: true,
+                      onChanged: (value) => setState(() => query = value),
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(AppIcons.search),
+                        labelText: 'Search services',
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppSpacing.sm),
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        children: [
+                          if (entries.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.md,
+                              ),
+                              child: Text(
+                                'No services match that search.',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                          ...entries.map(
+                            (entry) => ListTile(
+                              leading: SubscriptionLogo(
+                                name: entry.name,
+                                category: entry.category,
+                                catalogServiceId: entry.id,
+                                logoKey: entry.logoKey,
+                              ),
+                              title: Text(entry.name),
+                              trailing: widget.selected?.id == entry.id
+                                  ? const Icon(Icons.check)
+                                  : null,
+                              onTap: () => Navigator.pop(context, entry),
+                            ),
+                          ),
+                          ListTile(
+                            leading: const SubscriptionLogo(
+                              name: 'Custom',
+                              category: SubscriptionCategory.custom,
+                            ),
+                            title: const Text('Custom subscription'),
+                            subtitle: const Text(
+                              'Something else you want to remember',
+                            ),
+                            onTap: () => Navigator.pop(
+                              context,
+                              const SubscriptionCatalogEntry(
+                                id: 'custom',
+                                name: 'Custom subscription',
+                                category: SubscriptionCategory.custom,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
