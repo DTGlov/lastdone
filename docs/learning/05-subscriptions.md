@@ -47,6 +47,21 @@ fitness services from the Phase 5 brief, plus a Custom subscription path.
 Catalog IDs remain separate from editable display names. Search filters names
 and aliases within the selected category.
 
+The service picker is a keyboard-aware draggable modal sheet. It uses one
+`DraggableScrollableSheet` and the builder-provided scroll controller for the
+single service-results list. The header, category context, and search field
+remain stable while results scroll. The sheet expands toward 95% when search
+receives focus, and its bottom padding uses the keyboard inset when present or
+the device safe-area inset otherwise. This keeps results above the keyboard
+and iPhone home indicator without applying bottom padding twice. Search and
+focus controllers are owned by the picker state and disposed with it; choosing
+a service returns one result and closes only that picker.
+
+This coordinated layout is intentionally separate from the subscription
+editor’s own sheet. It avoids stacked vertical scrollables and keeps the
+catalog, search behavior, logos, categories, custom subscription, and billing
+state unchanged while addressing physical-device keyboard insets.
+
 No logo assets are bundled in this phase because no verified reusable official
 source was available. The centralized fallback in
 `subscription_editor_sheet.dart` uses a category colour and the first letter,
@@ -66,7 +81,10 @@ before deleting only the exact completion ID.
 1. Check all four tabs preserve state and that the context-aware FAB opens the
    correct flow or chooser without covering navigation.
 2. Create catalog services from Streaming, AI, gaming, and sports; search by
-   name; create a custom subscription; and inspect fallback logos.
+   name; create a custom subscription; and inspect fallback logos. Focus the
+   service search field on a physical iPhone, expand and drag the picker,
+   scroll to the final result, clear search, and confirm the editor’s entered
+   values remain intact after selection or dismissal.
 3. Test positive, zero, decimal, and very large amounts, all frequencies,
    currencies, and date anchors on the 29th, 30th, 31st, and February 29.
 4. Verify immediate dashboard refresh, ordering, per-currency estimates,

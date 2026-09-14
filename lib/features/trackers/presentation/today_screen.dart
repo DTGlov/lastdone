@@ -11,6 +11,7 @@ import '../../../core/widgets/dun_view.dart';
 import '../../today/domain/today_overview.dart';
 import '../../today/presentation/today_view_model.dart';
 import '../domain/tracker.dart';
+import '../domain/tracker_icon.dart';
 import '../domain/tracker_repository.dart';
 import '../../reminders/domain/reminder_repository.dart';
 import 'tracker_editor_sheet.dart';
@@ -368,18 +369,9 @@ class _CategoryIcon extends StatelessWidget {
       TrackerColor.gold => colors.dueSoon,
       TrackerColor.mint => colors.completed,
     };
-    final icon = switch (tracker.iconKey) {
-      TrackerIconKeys.home => Icons.home_outlined,
-      TrackerIconKeys.vehicle => Icons.directions_car_outlined,
-      TrackerIconKeys.personalCare => Icons.spa_outlined,
-      TrackerIconKeys.technology => Icons.devices_outlined,
-      TrackerIconKeys.relationships => Icons.people_outline,
-      TrackerIconKeys.tools => Icons.build_outlined,
-      TrackerIconKeys.leaf => Icons.eco_outlined,
-      _ => Icons.checklist_outlined,
-    };
+    final icon = TrackerIcons.resolve(tracker.iconKey);
     return Semantics(
-      label: '${tracker.category.label} category, ${tracker.title} icon',
+      label: '${tracker.category.label} category, ${icon.label} icon',
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.22),
@@ -389,10 +381,10 @@ class _CategoryIcon extends StatelessWidget {
         child: SizedBox(
           width: 42,
           height: 42,
-          child: Icon(
-            icon,
-            color: Theme.of(context).colorScheme.onSurface,
-            size: 21,
+          child: Text(
+            icon.emoji,
+            style: const TextStyle(fontSize: 24),
+            textAlign: TextAlign.center,
           ),
         ),
       ),

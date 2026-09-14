@@ -11,6 +11,7 @@ import '../../../core/widgets/dun_view.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../today/domain/today_overview.dart';
 import '../domain/tracker.dart';
+import '../domain/tracker_icon.dart';
 import '../domain/tracker_repository.dart';
 import '../../reminders/domain/reminder_repository.dart';
 import '../../reminders/domain/reminder.dart';
@@ -482,9 +483,10 @@ class _TrackerIcon extends StatelessWidget {
   Widget build(BuildContext context) => CircleAvatar(
     radius: 32,
     backgroundColor: _trackerColor(context, tracker.color),
-    child: Icon(
-      _iconFor(tracker.iconKey),
-      semanticLabel: '${tracker.category.label} icon',
+    child: Text(
+      TrackerIcons.resolve(tracker.iconKey).emoji,
+      semanticsLabel: '${tracker.category.label} icon',
+      style: const TextStyle(fontSize: 30),
     ),
   );
 }
@@ -528,17 +530,6 @@ DateTime _dateOnly(DateTime value) {
   final local = value.toLocal();
   return DateTime(local.year, local.month, local.day);
 }
-
-IconData _iconFor(String key) => switch (key) {
-  TrackerIconKeys.home => Icons.home_outlined,
-  TrackerIconKeys.vehicle => Icons.directions_car_outlined,
-  TrackerIconKeys.personalCare => Icons.spa_outlined,
-  TrackerIconKeys.technology => Icons.devices_outlined,
-  TrackerIconKeys.relationships => Icons.people_outline,
-  TrackerIconKeys.tools => Icons.build_outlined,
-  TrackerIconKeys.leaf => Icons.eco_outlined,
-  _ => Icons.checklist_outlined,
-};
 
 Color _trackerColor(BuildContext context, TrackerColor color) {
   final colors = Theme.of(context).extension<TrackerStatusThemeExtension>()!;

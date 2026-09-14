@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../core/time/app_clock.dart';
+import '../../../core/text/count_text.dart';
 import '../domain/tracker.dart';
+import '../domain/tracker_icon.dart';
 import '../domain/tracker_repository.dart';
 import '../../reminders/domain/reminder.dart';
 import '../../reminders/domain/reminder_repository.dart';
 
 enum TrackerEditorMode { create, edit }
 
-enum InitialCompletionChoice { never, today, date }
+enum InitialCompletionChoice { notYet, today, date }
 
 enum RepeatUnit { days, weeks, months, years, none }
 
@@ -53,12 +55,12 @@ class TrackerEditorViewModel extends ChangeNotifier {
       text: '${_editorInterval(tracker)}',
     );
     category = tracker?.category ?? TrackerCategory.custom;
-    iconKey = tracker?.iconKey ?? TrackerIconKeys.checklist;
+    iconKey = tracker?.iconKey ?? TrackerIcons.options.first.storageKey;
     color = tracker?.color ?? TrackerColor.plum;
     final schedule = _editorSchedule(tracker);
     repeatUnit = schedule.$1;
     repeatInterval = schedule.$2;
-    initialCompletion = InitialCompletionChoice.never;
+    initialCompletion = InitialCompletionChoice.notYet;
     selectedDate = null;
     firstDueDate = tracker?.firstDueDate;
     _initialName = nameController.text;
@@ -128,7 +130,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
       color != _initialColor ||
       repeatUnit != _initialRepeatUnit ||
       repeatInterval != _initialRepeatInterval ||
-      initialCompletion != InitialCompletionChoice.never ||
+      initialCompletion != InitialCompletionChoice.notYet ||
       selectedDate != null ||
       firstDueDate != _initialFirstDueDate;
   String get title => isCreate ? 'Remember something' : 'Edit tracker';
@@ -136,8 +138,18 @@ class TrackerEditorViewModel extends ChangeNotifier {
       ? 'What should future you keep track of?'
       : 'Keep it useful and easy to recognise.';
   String get cadencePreview => repeatUnit == RepeatUnit.none
-      ? 'No fixed schedule'
-      : 'Every $repeatInterval ${repeatUnit.label(repeatInterval)}';
+      ? 'Log it whenever it happens.'
+      : 'Every ${_repeatDescription(repeatUnit, repeatInterval)}';
+
+  String get latestCompletionSummary {
+    final completion = latestCompletion;
+    if (completion == null) return 'No completions yet';
+    final today = _dateOnly(clock.now);
+    final completed = _dateOnly(completion.completedAt);
+    return completed == today
+        ? 'Last handled today'
+        : 'Last handled ${_shortDate(completed)}';
+  }
 
   void setCategory(TrackerCategory value) {
     category = value;
@@ -171,7 +183,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
 
   void setInitialCompletion(InitialCompletionChoice value) {
     initialCompletion = value;
-    if (value != InitialCompletionChoice.never) firstDueDate = null;
+    if (value != InitialCompletionChoice.notYet) firstDueDate = null;
     if (value == InitialCompletionChoice.today) {
       selectedDate = _dateOnly(clock.now);
     }
@@ -208,7 +220,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
   void setFirstDueDate(DateTime? value) {
     firstDueDate = value == null ? null : _dateOnly(value);
     if (value != null) {
-      initialCompletion = InitialCompletionChoice.never;
+      initialCompletion = InitialCompletionChoice.notYet;
       selectedDate = null;
     }
     notifyListeners();
@@ -246,7 +258,7 @@ class TrackerEditorViewModel extends ChangeNotifier {
         updatedAt: now,
       );
       if (isCreate) {
-        final completion = initialCompletion == InitialCompletionChoice.never
+        final completion = initialCompletion == InitialCompletionChoice.notYet
             ? null
             : Completion(
                 id: '${tracker.id}-initial',
@@ -288,39 +300,13 @@ class TrackerEditorViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  List<String> get availableIconKeys => switch (category) {
-    TrackerCategory.home => [
-      TrackerIconKeys.home,
-      TrackerIconKeys.tools,
-      TrackerIconKeys.leaf,
-      TrackerIconKeys.checklist,
-    ],
-    TrackerCategory.vehicle => [
-      TrackerIconKeys.vehicle,
-      TrackerIconKeys.tools,
-      TrackerIconKeys.checklist,
-    ],
-    TrackerCategory.personalCare => [
-      TrackerIconKeys.personalCare,
-      TrackerIconKeys.leaf,
-      TrackerIconKeys.checklist,
-    ],
-    TrackerCategory.technology => [
-      TrackerIconKeys.technology,
-      TrackerIconKeys.tools,
-      TrackerIconKeys.checklist,
-    ],
-    TrackerCategory.relationships => [
-      TrackerIconKeys.relationships,
-      TrackerIconKeys.leaf,
-      TrackerIconKeys.checklist,
-    ],
-    TrackerCategory.custom => [
-      TrackerIconKeys.checklist,
-      TrackerIconKeys.tools,
-      TrackerIconKeys.leaf,
-    ],
-  };
+  List<String> get availableIconKeys {
+    final keys = TrackerIcons.options
+        .map((option) => option.storageKey)
+        .toList();
+    if (!keys.contains(iconKey)) keys.insert(0, iconKey);
+    return keys;
+  }
 
   RepeatRule get _repeatRule => switch (repeatUnit) {
     RepeatUnit.days => RepeatRule.daily,
@@ -393,10 +379,39 @@ class TrackerEditorViewModel extends ChangeNotifier {
 
 extension RepeatUnitLabel on RepeatUnit {
   String label(int interval) => switch (this) {
-    RepeatUnit.days => interval == 1 ? 'day' : 'days',
-    RepeatUnit.weeks => interval == 1 ? 'week' : 'weeks',
-    RepeatUnit.months => interval == 1 ? 'month' : 'months',
-    RepeatUnit.years => interval == 1 ? 'year' : 'years',
-    RepeatUnit.none => 'time',
+    RepeatUnit.days => daysText(interval),
+    RepeatUnit.weeks => weeksText(interval),
+    RepeatUnit.months => monthsText(interval),
+    RepeatUnit.years => yearsText(interval),
+    RepeatUnit.none => '',
   };
+}
+
+String _repeatDescription(RepeatUnit unit, int interval) =>
+    unit == RepeatUnit.days && interval == 1
+    ? 'day'
+    : unit == RepeatUnit.weeks && interval == 1
+    ? 'week'
+    : unit == RepeatUnit.months && interval == 1
+    ? 'month'
+    : unit == RepeatUnit.years && interval == 1
+    ? 'year'
+    : '$interval ${unit.label(interval)}';
+
+String _shortDate(DateTime date) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${months[date.month - 1]} ${date.day}';
 }
