@@ -1,58 +1,110 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 import '../../../core/design_system/app_icons.dart';
+import '../../../core/design_system/everdun_calendar.dart';
 import '../../../core/design_system/design_tokens.dart';
 import '../../../core/widgets/dun_view.dart';
 import '../../trackers/domain/tracker.dart';
+import '../../subscriptions/domain/subscription.dart';
+import '../domain/planner.dart';
 import '../domain/timeline.dart';
+import 'planner_view_model.dart';
 import 'timeline_view_model.dart';
 
-class TimelineScreen extends StatelessWidget {
+class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
 
   @override
+  State<TimelineScreen> createState() => _TimelineScreenState();
+}
+
+class _TimelineScreenState extends State<TimelineScreen> {
+  bool _planner = false;
+
+  @override
   Widget build(BuildContext context) => SafeArea(
-    child: Consumer<TimelineViewModel>(
-      builder: (context, model, _) => NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (notification.metrics.extentAfter < 500) {
-            model.scheduleLoadMore();
-          }
-          return false;
-        },
-        child: RefreshIndicator(
-          onRefresh: model.retry,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.md,
-              AppSpacing.lg,
-              112,
+    child: _planner
+        ? Consumer<PlannerViewModel>(
+            builder: (context, model, _) => _PlannerContent(
+              model: model,
+              onHistory: () => setState(() => _planner = false),
             ),
-            children: [
-              _Header(model: model),
-              const SizedBox(height: AppSpacing.md),
-              _MonthlySummary(model: model),
-              const SizedBox(height: AppSpacing.md),
-              _Filters(model: model),
-              const SizedBox(height: AppSpacing.md),
-              switch (model.state) {
-                TimelineLoadState.loading => const _LoadingState(),
-                TimelineLoadState.error => _ErrorState(model: model),
-                TimelineLoadState.empty =>
-                  model.hasFilters
-                      ? _NoResultsState(onClear: model.clearFilters)
-                      : const _EmptyState(),
-                TimelineLoadState.content => _TimelineFeed(model: model),
-              },
-            ],
+          )
+        : Consumer<TimelineViewModel>(
+            builder: (context, model, _) =>
+                NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification.metrics.extentAfter < 500) {
+                      model.scheduleLoadMore();
+                    }
+                    return false;
+                  },
+                  child: RefreshIndicator(
+                    onRefresh: model.retry,
+                    child: ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                        AppSpacing.lg,
+                        112,
+                      ),
+                      children: [
+                        _ModeSwitch(
+                          planner: false,
+                          onChanged: () => setState(() => _planner = true),
+                        ),
+                        _Header(model: model),
+                        const SizedBox(height: AppSpacing.md),
+                        _MonthlySummary(model: model),
+                        const SizedBox(height: AppSpacing.md),
+                        _Filters(model: model),
+                        const SizedBox(height: AppSpacing.md),
+                        switch (model.state) {
+                          TimelineLoadState.loading => const _LoadingState(),
+                          TimelineLoadState.error => _ErrorState(model: model),
+                          TimelineLoadState.empty =>
+                            model.hasFilters
+                                ? _NoResultsState(onClear: model.clearFilters)
+                                : const _EmptyState(),
+                          TimelineLoadState.content => _TimelineFeed(
+                            model: model,
+                          ),
+                        },
+                      ],
+                    ),
+                  ),
+                ),
           ),
-        ),
+  );
+}
+
+class _ModeSwitch extends StatelessWidget {
+  const _ModeSwitch({required this.planner, required this.onChanged});
+  final bool planner;
+  final VoidCallback onChanged;
+  @override
+  Widget build(BuildContext context) => SegmentedButton<bool>(
+    segments: const [
+      ButtonSegment(
+        value: false,
+        label: Text('History'),
+        icon: Icon(AppIcons.timeline),
       ),
-    ),
+      ButtonSegment(
+        value: true,
+        label: Text('Planner'),
+        icon: Icon(AppIcons.today),
+      ),
+    ],
+    selected: {planner},
+    onSelectionChanged: (value) {
+      if (value.isNotEmpty && value.first != planner) onChanged();
+    },
+    showSelectedIcon: false,
   );
 }
 
@@ -399,6 +451,237 @@ class _LoadingState extends StatelessWidget {
     ),
   );
 }
+
+class _PlannerContent extends StatelessWidget {
+  const _PlannerContent({required this.model, required this.onHistory});
+  final PlannerViewModel model;
+  final VoidCallback onHistory;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final items = model.selectedItems;
+    return RefreshIndicator(
+      onRefresh: model.retry,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          112,
+        ),
+        children: [
+          _ModeSwitch(planner: true, onChanged: onHistory),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Planner', style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'A clear view of what is coming up.',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(
+                width: 84,
+                height: 64,
+                child: DunMascot(decorative: true),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _PlannerSummary(model: model),
+          const SizedBox(height: AppSpacing.md),
+          if (model.state == PlannerLoadState.loading)
+            const _LoadingState()
+          else if (model.state == PlannerLoadState.error)
+            Column(
+              children: [
+                const Text('We could not load your Planner.'),
+                TextButton(
+                  onPressed: model.retry,
+                  child: const Text('Try again'),
+                ),
+              ],
+            )
+          else ...[
+            EverDunMonthCalendar<PlannerItem>(
+              firstDay: DateTime(model.today.year, model.today.month),
+              lastDay: DateTime(model.today.year, model.today.month + 12, 0),
+              focusedDay: model.focusedMonth,
+              selectedDayPredicate: (day) => _sameDate(day, model.selectedDate),
+              onDaySelected: (selected, _) => model.selectDay(selected),
+              onPageChanged: model.changeMonth,
+              eventLoader: (day) => model.itemsFor(day),
+              headerStyle: HeaderStyle(
+                titleTextStyle: theme.textTheme.titleMedium!,
+                formatButtonVisible: false,
+                leftChevronIcon: const Icon(AppIcons.previous),
+                rightChevronIcon: const Icon(AppIcons.next),
+              ),
+              daysOfWeekStyle: DaysOfWeekStyle(
+                weekdayStyle: theme.textTheme.labelSmall!,
+                weekendStyle: theme.textTheme.labelSmall!,
+              ),
+              calendarStyle: CalendarStyle(
+                outsideDaysVisible: false,
+                defaultTextStyle: theme.textTheme.bodyMedium!,
+                weekendTextStyle: theme.textTheme.bodyMedium!,
+                todayDecoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: theme.colorScheme.primary),
+                ),
+                selectedDecoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: theme.colorScheme.primary,
+                ),
+                selectedTextStyle: theme.textTheme.bodyMedium!.copyWith(
+                  color: theme.colorScheme.onPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              calendarBuilders: CalendarBuilders<PlannerItem>(
+                markerBuilder: (context, day, events) {
+                  if (events.isEmpty) return null;
+                  final hasDue = events.any(
+                    (item) => item.type == PlannerItemType.trackerDue,
+                  );
+                  final hasCharge = events.any(
+                    (item) => item.type == PlannerItemType.subscriptionCharge,
+                  );
+                  final handled = events.any(
+                    (item) => item.status == PlannerItemStatus.handled,
+                  );
+                  final colour = handled
+                      ? theme
+                            .extension<TrackerStatusThemeExtension>()!
+                            .completed
+                      : hasDue
+                      ? theme.extension<TrackerStatusThemeExtension>()!.dueSoon
+                      : theme.colorScheme.secondary;
+                  return Semantics(
+                    label: '${events.length} Planner items',
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (hasDue) _marker(colour),
+                        if (hasCharge)
+                          _marker(
+                            theme
+                                .extension<TrackerStatusThemeExtension>()!
+                                .category,
+                          ),
+                        if (handled)
+                          _marker(
+                            theme
+                                .extension<TrackerStatusThemeExtension>()!
+                                .completed,
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              _dayHeading(context, model.selectedDate),
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            if (items.isEmpty)
+              const Text('The lodge is calm. Nothing is planned for this day.')
+            else
+              ...items.map((item) => _PlannerRow(item: item)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _marker(Color color) => Container(
+    width: 5,
+    height: 5,
+    margin: const EdgeInsets.symmetric(horizontal: 1),
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+}
+
+class _PlannerSummary extends StatelessWidget {
+  const _PlannerSummary({required this.model});
+  final PlannerViewModel model;
+  @override
+  Widget build(BuildContext context) {
+    final summary = model.monthSummary;
+    final currencies = summary.subscriptionTotals.entries
+        .map((entry) => formatMinorAmount(entry.value, entry.key))
+        .join(' · ');
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer
+            .withValues(alpha: .35),
+        borderRadius: BorderRadius.circular(AppRadii.control),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        child: Text(
+          '${summary.dueCount} ${summary.dueCount == 1 ? 'thing' : 'things'} due · ${summary.handledCount} handled${currencies.isEmpty ? '' : ' · $currencies expected'}',
+        ),
+      ),
+    );
+  }
+}
+
+class _PlannerRow extends StatelessWidget {
+  const _PlannerRow({required this.item});
+  final PlannerItem item;
+  @override
+  Widget build(BuildContext context) {
+    final isCharge = item.type == PlannerItemType.subscriptionCharge;
+    final detail = isCharge
+        ? '${formatMinorAmount(item.amountMinor!, item.currency!)} · Charge expected'
+        : item.status == PlannerItemStatus.overdue
+        ? 'Overdue'
+        : item.status == PlannerItemStatus.handled
+        ? 'Handled${item.completedAt == null ? '' : ' · ${_timeLabel(context, item.completedAt!)}'}'
+        : 'Due';
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xs),
+      child: Material(
+        color: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.control),
+          side: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          tileColor: Colors.transparent,
+          onTap: () => context.push(item.navigationTarget),
+          leading: Icon(
+            isCharge
+                ? Icons.receipt_long_outlined
+                : _trackerIcon(item.iconKey ?? ''),
+          ),
+          title: Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis),
+          subtitle: Text(detail),
+          trailing: const Icon(AppIcons.next),
+        ),
+      ),
+    );
+  }
+}
+
+String _dayHeading(BuildContext context, DateTime date) =>
+    MaterialLocalizations.of(context).formatFullDate(date);
 
 String _timeLabel(BuildContext context, DateTime value) =>
     MaterialLocalizations.of(context)

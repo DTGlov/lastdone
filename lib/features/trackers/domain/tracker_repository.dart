@@ -26,6 +26,23 @@ abstract interface class TrackerOverviewRepository
   Future<void> refreshOverview();
 }
 
+class UnavailableTrackerOverviewRepository
+    implements TrackerOverviewRepository {
+  const UnavailableTrackerOverviewRepository();
+
+  @override
+  Future<List<Tracker>> listTrackers() async => const [];
+
+  @override
+  Future<void> insertStarterTrackers(List<Tracker> trackers) async {}
+
+  @override
+  Stream<List<TrackerOverview>> watchOverview() => Stream.value(const []);
+
+  @override
+  Future<void> refreshOverview() async {}
+}
+
 abstract interface class TrackerArchiveRepository {
   Stream<List<Tracker>> watchArchivedTrackers();
   Future<void> archiveTracker(String trackerId, DateTime archivedAt);

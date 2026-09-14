@@ -26,6 +26,10 @@ The local repository publishes its existing overview, subscription, timeline, an
 
 The debug banner is disabled on the normal application root, while assertions and development tooling remain enabled. Permanent deletion is intentionally deferred so users cannot accidentally lose history in this phase.
 
+The archive-column migration also uses typed `PRAGMA table_info` introspection.
+This recovers from a partially applied development upgrade without dropping,
+rebuilding, or resetting tracker data.
+
 ```mermaid
 flowchart LR
   A[Details action] --> B{Confirm}

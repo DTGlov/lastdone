@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/design_system/design_tokens.dart';
-import '../../../core/design_system/lastdone_dialog.dart';
+import '../../../core/design_system/everdun_dialog.dart';
 import '../../../core/time/app_clock.dart';
 import '../domain/subscription.dart';
 import '../domain/subscription_repository.dart';
@@ -68,20 +68,20 @@ class CancelledSubscriptionsScreen extends StatelessWidget {
         context.read<AppClock>().now,
       );
       if (!context.mounted) return;
-      await showLastDoneDialog<void>(
+      await showEverDunDialog<void>(
         context: context,
         title: 'Subscription restored',
         message: 'It is back in your active subscriptions with its saved details intact.',
-        variant: LastDoneDialogVariant.success,
+        variant: EverDunDialogVariant.success,
         primaryLabel: 'Done',
       );
     } catch (_) {
       if (!context.mounted) return;
-      await showLastDoneDialog<void>(
+      await showEverDunDialog<void>(
         context: context,
         title: 'Could not restore subscription',
         message: 'Your subscription is still cancelled. Please try again.',
-        variant: LastDoneDialogVariant.error,
+        variant: EverDunDialogVariant.error,
         primaryLabel: 'Okay',
       );
     }

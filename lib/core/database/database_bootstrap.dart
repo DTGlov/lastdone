@@ -42,23 +42,35 @@ class DatabaseBootstrap {
         await _createReminders(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute(
-            "ALTER TABLE trackers ADD COLUMN repeat_interval INTEGER NOT NULL DEFAULT 1",
+        if (oldVersion < 2 && newVersion >= 2) {
+          await _addColumnIfMissing(
+            db,
+            table: 'trackers',
+            column: 'repeat_interval',
+            definition: 'INTEGER NOT NULL DEFAULT 1',
           );
-          await db.execute(
-            "ALTER TABLE trackers ADD COLUMN category_key TEXT NOT NULL DEFAULT 'custom'",
+          await _addColumnIfMissing(
+            db,
+            table: 'trackers',
+            column: 'category_key',
+            definition: "TEXT NOT NULL DEFAULT 'custom'",
           );
-          await db.execute(
-            "ALTER TABLE trackers ADD COLUMN icon_key TEXT NOT NULL DEFAULT 'checklist'",
+          await _addColumnIfMissing(
+            db,
+            table: 'trackers',
+            column: 'icon_key',
+            definition: "TEXT NOT NULL DEFAULT 'checklist'",
           );
-          await db.execute(
-            "ALTER TABLE trackers ADD COLUMN color_key TEXT NOT NULL DEFAULT 'plum'",
+          await _addColumnIfMissing(
+            db,
+            table: 'trackers',
+            column: 'color_key',
+            definition: "TEXT NOT NULL DEFAULT 'plum'",
           );
         }
-        if (oldVersion < 3) {
+        if (oldVersion < 3 && newVersion >= 3) {
           await db.execute(
-            '''CREATE TABLE subscriptions (
+            '''CREATE TABLE IF NOT EXISTS subscriptions (
               id TEXT PRIMARY KEY, catalog_service_id TEXT, name TEXT NOT NULL,
               category TEXT NOT NULL, logo_key TEXT, amount_minor INTEGER NOT NULL,
               currency TEXT NOT NULL, frequency TEXT NOT NULL,
@@ -66,21 +78,32 @@ class DatabaseBootstrap {
               note TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)''',
           );
           await db.execute(
-            'CREATE INDEX subscriptions_next_charge ON subscriptions (active, next_charge_date)',
+            'CREATE INDEX IF NOT EXISTS subscriptions_next_charge ON subscriptions (active, next_charge_date)',
           );
         }
-        if (oldVersion < 4) await _createReminders(db);
-        if (oldVersion < 5) {
-          await db.execute(
-            'ALTER TABLE trackers ADD COLUMN first_due_date TEXT',
+        if (oldVersion < 4 && newVersion >= 4) await _createReminders(db);
+        if (oldVersion < 5 && newVersion >= 5) {
+          await _addColumnIfMissing(
+            db,
+            table: 'trackers',
+            column: 'first_due_date',
+            definition: 'TEXT',
           );
         }
-        if (oldVersion < 6) {
-          await db.execute('ALTER TABLE trackers ADD COLUMN archived_at TEXT');
+        if (oldVersion < 6 && newVersion >= 6) {
+          await _addColumnIfMissing(
+            db,
+            table: 'trackers',
+            column: 'archived_at',
+            definition: 'TEXT',
+          );
         }
-        if (oldVersion < 7) {
-          await db.execute(
-            'ALTER TABLE subscriptions ADD COLUMN cancelled_at TEXT',
+        if (oldVersion < 7 && newVersion >= 7) {
+          await _addColumnIfMissing(
+            db,
+            table: 'subscriptions',
+            column: 'cancelled_at',
+            definition: 'TEXT',
           );
         }
       },
@@ -88,7 +111,7 @@ class DatabaseBootstrap {
   );
 
   static Future<void> _createReminders(DatabaseExecutor db) async {
-    await db.execute('''CREATE TABLE reminder_preferences (
+    await db.execute('''CREATE TABLE IF NOT EXISTS reminder_preferences (
         notification_id INTEGER PRIMARY KEY,
         target_type TEXT NOT NULL,
         target_id TEXT NOT NULL,
@@ -101,7 +124,31 @@ class DatabaseBootstrap {
         updated_at TEXT NOT NULL,
         UNIQUE(target_type, target_id))''');
     await db.execute(
-      'CREATE INDEX reminder_preferences_enabled ON reminder_preferences (enabled)',
+      'CREATE INDEX IF NOT EXISTS reminder_preferences_enabled ON reminder_preferences (enabled)',
     );
+  }
+
+  static Future<void> _addColumnIfMissing(
+    DatabaseExecutor db, {
+    required String table,
+    required String column,
+    required String definition,
+  }) async {
+    final tableInfo = await db.rawQuery('PRAGMA table_info($table)');
+    if (tableInfo.isEmpty) {
+      throw StateError('Expected database table is missing: $table');
+    }
+    final existing = tableInfo.where((row) => row['name'] == column);
+    if (existing.isEmpty) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
+      return;
+    }
+    final expectedType = definition.split(' ').first.toUpperCase();
+    final actualType = (existing.first['type'] as String? ?? '').toUpperCase();
+    if (actualType.isNotEmpty && actualType != expectedType) {
+      throw StateError(
+        'Existing database column has an incompatible type: $table.$column',
+      );
+    }
   }
 }
